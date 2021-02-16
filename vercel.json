@@ -1,0 +1,35 @@
+{
+  "routes": [
+    {
+      "src": "/real_index.html",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/index.html",
+      "dest": "/api/appendData.js"
+    },
+    {
+      "src": "/",
+      "dest": "/api/appendData.js"
+    },
+    {
+      "src": "/service-worker.js",
+      "headers": {
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "dest": "/service-worker.js"
+    },
+    {
+      "src": "/static/js/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=31536000"
+      },
+      "dest": "/static/js/$1"
+    },
+    { "handle": "filesystem" },
+    {
+      "src": "/.*",
+      "dest": "/api/appendData.js"
+    }
+  ]
+}

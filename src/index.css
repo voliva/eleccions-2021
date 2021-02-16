@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*:not(:focus-visible) {
+  outline: none !important;
+}
+
+.border-b-3 {
+  border-bottom-width: 3px;
+}
