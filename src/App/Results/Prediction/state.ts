@@ -19,7 +19,6 @@ import {
   mergeAll,
   mergeMapTo,
   scan,
-  share,
   startWith,
   switchMap,
   take,
@@ -486,7 +485,7 @@ const provincePredictions$ = merge(
       }
     },
   ),
-  share(),
+  shareLatest(),
 )
 
 const connect = <T>() =>

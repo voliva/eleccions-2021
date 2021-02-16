@@ -1,6 +1,6 @@
 import { bind, shareLatest } from "@react-rxjs/core"
 import { Observable } from "rxjs"
-import { distinctUntilChanged, map, pluck } from "rxjs/operators"
+import { distinctUntilChanged, map } from "rxjs/operators"
 import { mapRecord } from "utils/record-utils"
 import { Provinces } from "./provinces"
 import { source$ } from "./source"
@@ -40,7 +40,7 @@ export const [useParticipation, getParticipation$] = bind(
   (province?: Provinces) =>
     participation$.pipe(
       province
-        ? pluck(province)
+        ? map((x) => x[province])
         : map((data) =>
             Object.values(data).reduce(
               (acc, current) => {
