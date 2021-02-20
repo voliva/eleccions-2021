@@ -1,4 +1,4 @@
-import { PartyId } from "api/parties"
+import { PartyId } from "@/api/parties"
 import { FC, ImgHTMLAttributes } from "react"
 
 export const Logo: FC<

@@ -2,10 +2,10 @@ import { bind, shareLatest } from "@react-rxjs/core"
 import {
   Participation,
   participation$ as realParticipation$,
-} from "api/participation"
-import { PartyId } from "api/parties"
-import { Provinces, sitsByProvince } from "api/provinces"
-import { Votes, votes$ } from "api/votes"
+} from "@/api/participation"
+import { PartyId } from "@/api/parties"
+import { Provinces, sitsByProvince } from "@/api/provinces"
+import { Votes, votes$ } from "@/api/votes"
 import {
   combineLatest,
   merge,
@@ -19,7 +19,6 @@ import {
   mergeAll,
   mergeMapTo,
   scan,
-  share,
   startWith,
   switchMap,
   take,
@@ -27,14 +26,14 @@ import {
   tap,
   withLatestFrom,
 } from "rxjs/operators"
-import { add } from "utils/add"
-import { dhondt } from "utils/dhondt"
+import { add } from "@/utils/add"
+import { dhondt } from "@/utils/dhondt"
 import {
   mapRecord,
   recordEntries,
   recordFromEntries,
   recordKeys,
-} from "utils/record-utils"
+} from "@/utils/record-utils"
 import {
   mergeResults,
   predictionInput$,
@@ -43,7 +42,6 @@ import {
   Results,
   reset$,
 } from "../state/common"
-import { withoutProvince, withProvince } from "utils/withProvince"
 import { selectedProvince$ } from "../AreaPicker"
 import { mergeWithKey } from "@react-rxjs/utils"
 
@@ -295,18 +293,16 @@ function getProvinceKeyValues(
   return { prevValue, min, lockedValue }
 }
 
-const provinceSnapshot$ = withProvince(editParty$).pipe(
-  switchMap(([partyId, province]) =>
-    locks$.pipe(withLatestFrom(_predictions$)).pipe(
-      map(([locks, prevPredictions]) => ({
-        partyId,
-        province,
-        locks,
-        ...getProvinceKeyValues(province, locks, prevPredictions, partyId),
-        prevPredictions,
-      })),
-    ),
-  ),
+const provinceSnapshot$ = editParty$.pipe(
+  withLatestFrom(selectedProvince$, locks$, _predictions$),
+  filter(([, province]) => !!province),
+  map(([partyId, province, locks, prevPredictions]) => ({
+    partyId,
+    province,
+    locks,
+    ...getProvinceKeyValues(province!, locks, prevPredictions, partyId),
+    prevPredictions,
+  })),
   shareLatest(),
 )
 
@@ -349,23 +345,26 @@ function getCatKeyValues(
   return { prevValue, min, lockedValue }
 }
 
-const catSnapshot$ = withoutProvince(editParty$).pipe(
-  switchMap((partyId) =>
-    combineLatest([
-      multipliers$,
-      locks$.pipe(withLatestFrom(_predictions$)),
-    ]).pipe(
-      map(([multipliers, [locks, prevPredictions]]) => ({
-        partyId,
-        multipliers,
-        locks,
-        prevPredictions,
-        ...getCatKeyValues(locks, prevPredictions, partyId, multipliers),
-        provincesKeyValues: mapRecord(prevPredictions, (_, province) =>
-          getProvinceKeyValues(province, locks, prevPredictions, partyId),
+const catSnapshot$ = editParty$.pipe(
+  withLatestFrom(selectedProvince$),
+  switchMap(([partyId, province]) =>
+    province
+      ? []
+      : combineLatest([
+          multipliers$,
+          locks$.pipe(withLatestFrom(_predictions$)),
+        ]).pipe(
+          map(([multipliers, [locks, prevPredictions]]) => ({
+            partyId,
+            multipliers,
+            locks,
+            prevPredictions,
+            ...getCatKeyValues(locks, prevPredictions, partyId, multipliers),
+            provincesKeyValues: mapRecord(prevPredictions, (_, province) =>
+              getProvinceKeyValues(province, locks, prevPredictions, partyId),
+            ),
+          })),
         ),
-      })),
-    ),
   ),
   shareLatest(),
 )
@@ -486,7 +485,7 @@ const provincePredictions$ = merge(
       }
     },
   ),
-  share(),
+  shareLatest(),
 )
 
 const connect = <T>() =>

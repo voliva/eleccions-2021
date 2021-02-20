@@ -1,7 +1,8 @@
+import { useEffect, useRef } from "react"
 import { combineLatest, concat } from "rxjs"
 import { map, take, withLatestFrom } from "rxjs/operators"
 import { bind, Subscribe } from "@react-rxjs/core"
-import { parties, PartyId } from "api/parties"
+import { parties, PartyId } from "@/api/parties"
 import { minMax$, multipliers$, prediction$ } from "./state"
 import {
   onPredictionChange,
@@ -10,12 +11,11 @@ import {
   useIsEditingMe,
   onDoneEditing,
   setIsManipulatinBar,
-} from "App/Results/state/common"
-import { ProgressBar } from "components/progressBar"
-import { useEffect, useRef } from "react"
+} from "../state/common"
+import { ProgressBar } from "@/components/progressBar"
 import { selectedProvince$ } from "../AreaPicker"
-import { recordEntries } from "utils/record-utils"
-import { add } from "utils/add"
+import { recordEntries } from "@/utils/record-utils"
+import { add } from "@/utils/add"
 
 const value$ = concat(
   combineLatest([selectedProvince$, prediction$, currentParty$]).pipe(

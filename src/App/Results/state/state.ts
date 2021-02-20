@@ -1,16 +1,16 @@
 import { bind } from "@react-rxjs/core"
 import { PartyId } from "api/parties"
 import { Provinces } from "api/provinces"
-import { isResults$ } from "App/ResultsOrPrediction"
+import { isResults$ } from "@/App/ResultsOrPrediction"
 import { combineLatest, from } from "rxjs"
 import { map, mergeMap, scan, startWith, switchMap } from "rxjs/operators"
 import { selectedProvince$ } from "../AreaPicker"
 import { getResultsByProvince } from "./results"
 import { PartyResults, isManipulatingBar$ } from "./common"
 import { deferredPrediction } from "../Prediction"
-import { participation$ } from "api/participation"
-import { votes$ } from "api/votes"
-import { mapRecord } from "utils/record-utils"
+import { participation$ } from "@/api/participation"
+import { votes$ } from "@/api/votes"
+import { mapRecord } from "@/utils/record-utils"
 
 const getPredictionResultsByProvince = (province: Provinces | null) =>
   from(deferredPrediction).pipe(

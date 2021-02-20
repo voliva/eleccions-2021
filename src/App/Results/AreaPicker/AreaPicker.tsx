@@ -1,5 +1,5 @@
-import { provinceNames, Provinces } from "api/provinces"
 import { useEffect, useState } from "react"
+import { provinceNames, Provinces } from "@/api/provinces"
 import { changeProvince, useSelectedProvince } from "./AreaPicker.state"
 
 export const AreaPicker = () => {

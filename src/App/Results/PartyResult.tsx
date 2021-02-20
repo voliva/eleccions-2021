@@ -1,8 +1,8 @@
-import { Party, PartyId } from "api/parties"
-import { formatNumber, formatPercent } from "utils/formatters"
+import { Party, PartyId } from "@/api/parties"
+import { formatNumber, formatPercent } from "@/utils/formatters"
 import { Link } from "react-router-dom"
-import { getTextColor } from "utils/color"
-import { ProgressBar } from "components/progressBar"
+import { getTextColor } from "@/utils/color"
+import { ProgressBar } from "@/components/progressBar"
 
 export const PartyResult: React.FC<{
   party: Party

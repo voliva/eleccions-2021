@@ -1,7 +1,7 @@
 import { shareLatest } from "@react-rxjs/core"
 import { Observable } from "rxjs"
 import { distinctUntilChanged, map } from "rxjs/operators"
-import { mapRecord } from "utils/record-utils"
+import { mapRecord } from "@/utils/record-utils"
 import { parties as partiesData, Party, PartyId } from "./parties"
 import { Provinces } from "./provinces"
 import { source$ } from "./source"

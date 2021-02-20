@@ -1,4 +1,4 @@
-import { PartyId } from "api/parties"
+import { PartyId } from "@/api/parties"
 import { useIsEditing, onToggleLock } from "../state/common"
 import { useIsLocked } from "./state"
 

@@ -1,4 +1,4 @@
-import { PartyId } from "api/parties"
+import { PartyId } from "@/api/parties"
 import { Edit } from "./Edit"
 import Form from "./Form"
 import { Lock } from "./Lock"
