@@ -1,4 +1,4 @@
-import { PartyId } from "api/parties"
+import { PartyId } from "@/api/parties"
 import { PartyResult } from "../PartyResult"
 import { usePartyResult, getPartyResult$ } from "../state"
 import { useIsEditing, onEditParty } from "../state/common"

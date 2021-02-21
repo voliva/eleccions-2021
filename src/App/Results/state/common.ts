@@ -1,13 +1,13 @@
-import { createListener } from "@react-rxjs/utils"
 import { merge } from "rxjs"
+import { createListener } from "@react-rxjs/utils"
 import { bind } from "@react-rxjs/core"
 import { distinctUntilChanged, filter, map, mapTo } from "rxjs/operators"
-import { isResults$ } from "App/ResultsOrPrediction"
-import { Party, PartyId } from "api/parties"
-import { Votes } from "api/votes"
-import { Provinces } from "api/provinces"
-import { recordEntries } from "utils/record-utils"
-import { add } from "utils/add"
+import { isResults$ } from "@/App/ResultsOrPrediction"
+import { Party, PartyId } from "@/api/parties"
+import { Votes } from "@/api/votes"
+import { Provinces } from "@/api/provinces"
+import { recordEntries } from "@/utils/record-utils"
+import { add } from "@/utils/add"
 
 export interface PartyResults {
   party: Party

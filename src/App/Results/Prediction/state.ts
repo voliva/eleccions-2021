@@ -2,10 +2,10 @@ import { bind, shareLatest } from "@react-rxjs/core"
 import {
   Participation,
   participation$ as realParticipation$,
-} from "api/participation"
-import { PartyId } from "api/parties"
-import { Provinces, sitsByProvince } from "api/provinces"
-import { Votes, votes$ } from "api/votes"
+} from "@/api/participation"
+import { PartyId } from "@/api/parties"
+import { Provinces, sitsByProvince } from "@/api/provinces"
+import { Votes, votes$ } from "@/api/votes"
 import {
   combineLatest,
   merge,
@@ -26,14 +26,14 @@ import {
   tap,
   withLatestFrom,
 } from "rxjs/operators"
-import { add } from "utils/add"
-import { dhondt } from "utils/dhondt"
+import { add } from "@/utils/add"
+import { dhondt } from "@/utils/dhondt"
 import {
   mapRecord,
   recordEntries,
   recordFromEntries,
   recordKeys,
-} from "utils/record-utils"
+} from "@/utils/record-utils"
 import {
   mergeResults,
   predictionInput$,
@@ -294,20 +294,15 @@ function getProvinceKeyValues(
 }
 
 const provinceSnapshot$ = editParty$.pipe(
-  withLatestFrom(selectedProvince$),
-  switchMap(([partyId, province]) =>
-    province
-      ? locks$.pipe(withLatestFrom(_predictions$)).pipe(
-          map(([locks, prevPredictions]) => ({
-            partyId,
-            province,
-            locks,
-            ...getProvinceKeyValues(province, locks, prevPredictions, partyId),
-            prevPredictions,
-          })),
-        )
-      : [],
-  ),
+  withLatestFrom(selectedProvince$, locks$, _predictions$),
+  filter(([, province]) => !!province),
+  map(([partyId, province, locks, prevPredictions]) => ({
+    partyId,
+    province,
+    locks,
+    ...getProvinceKeyValues(province!, locks, prevPredictions, partyId),
+    prevPredictions,
+  })),
   shareLatest(),
 )
 
@@ -353,7 +348,7 @@ function getCatKeyValues(
 const catSnapshot$ = editParty$.pipe(
   withLatestFrom(selectedProvince$),
   switchMap(([partyId, province]) =>
-    !province
+    province
       ? []
       : combineLatest([
           multipliers$,

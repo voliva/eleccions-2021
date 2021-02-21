@@ -1,11 +1,11 @@
+import { FC, lazy, Suspense, useState } from "react"
+import { recordFromEntries } from "@/utils/record-utils"
+import { sitsByProvince } from "@/api/provinces"
 import { HalfDonut } from "./halfDonut"
 import { LineChart } from "./lineChart"
-import { recordFromEntries } from "utils/record-utils"
 import { useCurrentResults, usePercents, percents$ } from "../state"
-import { FC, lazy, Suspense, useState } from "react"
 import { GradientChart } from "./gradientChart"
 import { useSelectedProvince } from "../AreaPicker"
-import { sitsByProvince } from "api/provinces"
 
 const sitsChartPromise = import("./flipSitsChart")
 const SitsChart = lazy(() => sitsChartPromise)

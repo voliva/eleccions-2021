@@ -2,13 +2,13 @@ const fetch = require("node-fetch")
 
 const DOMAIN_NAME =
   process.env.VERCEL_GIT_COMMIT_REF === "main"
-    ? "eleccions.vercel.app"
-    : "test-eleccions.vercel.app"
+    ? "eleccions2021.vercel.app"
+    : "test-eleccions2021.vercel.app"
 
 const DATA_SOURCE =
   process.env.VERCEL_GIT_COMMIT_REF === "main"
-    ? process.env.REACT_APP_DATA_SOURCE
-    : process.env.REACT_APP_STAGING_DATA_SOURCE
+    ? process.env.DATA_SOURCE
+    : process.env.STAGING_DATA_SOURCE
 
 module.exports = (req, res) => {
   res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate")

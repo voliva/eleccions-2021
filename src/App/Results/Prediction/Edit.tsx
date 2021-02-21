@@ -1,10 +1,10 @@
-import { PartyId } from "api/parties"
+import { PartyId } from "@/api/parties"
 import {
   useIsEditingMe,
   onDoneEditing,
   onEditParty,
   useIsEditing,
-} from "App/Results/state/common"
+} from "../state/common"
 
 export const Edit: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
   const isEditingMe = useIsEditingMe(partyId)

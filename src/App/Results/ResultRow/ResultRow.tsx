@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react"
 import { Subscribe } from "@react-rxjs/core"
-import { PartyId } from "api/parties"
+import { PartyId } from "@/api/parties"
 import { Result, result$ } from "./Result"
 import { deferredPrediction } from "../Prediction"
 

@@ -1,5 +1,5 @@
 import { Subscribe } from "@react-rxjs/core"
-import { useIsResults } from "App/ResultsOrPrediction"
+import { useIsResults } from "@/App/ResultsOrPrediction"
 import { Flipper, Flipped } from "react-flip-toolkit"
 import { merge } from "rxjs"
 import { AreaPicker } from "./AreaPicker"

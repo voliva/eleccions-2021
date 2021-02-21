@@ -5,9 +5,9 @@ import { PartyId } from "./parties"
 import { Provinces } from "./provinces"
 
 export const DATA_SOURCE: any =
-  process.env.REACT_APP_VERCEL_GIT_COMMIT_REF === "main"
-    ? process.env.REACT_APP_DATA_SOURCE
-    : process.env.REACT_APP_STAGING_DATA_SOURCE
+  import.meta.env.VITE_VERCEL_GIT_COMMIT_REF === "main"
+    ? import.meta.env.VITE_DATA_SOURCE
+    : import.meta.env.VITE_STAGING_DATA_SOURCE
 
 export const POLL_TIME = 60_000
 
@@ -38,6 +38,12 @@ const service$ = timer(0, POLL_TIME).pipe(
     }> => fetch(DATA_SOURCE).then((result) => result.json()),
   ),
 )
+
+declare global {
+  interface Window {
+    data: any
+  }
+}
 
 const init$: typeof service$ = new Observable((observer) => {
   const sendWindowData = () => {

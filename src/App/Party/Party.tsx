@@ -1,15 +1,15 @@
-import { parties, PartyId } from "api/parties"
-import { Provinces } from "api/provinces"
-import { location$ } from "App/history"
 import { FC } from "react"
+import { merge } from "rxjs"
+import { filter, map, switchMap } from "rxjs/operators"
+import { Subscribe } from "@react-rxjs/core"
 import { useHistory, useParams } from "react-router"
 import { Link, matchPath } from "react-router-dom"
-import { filter, map, switchMap } from "rxjs/operators"
-import { merge } from "rxjs"
+import { parties, PartyId } from "@/api/parties"
+import { Provinces } from "@/api/provinces"
+import { location$ } from "@/App/history"
+import { PartyResult } from "@/App/Results/PartyResult"
 import { Logo } from "./Logo"
 import { partyResult$, usePartyResult } from "./party.state"
-import { Subscribe } from "@react-rxjs/core"
-import { PartyResult } from "App/Results/PartyResult"
 import { BackArrow } from "./BackArrow"
 
 const PartyPage: FC = () => {
@@ -92,5 +92,7 @@ const Party = () => (
     <PartyPage />
   </Subscribe>
 )
+
+type t = React.ReactElement
 
 export default Party

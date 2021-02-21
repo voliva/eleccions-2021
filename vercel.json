@@ -13,18 +13,18 @@
       "dest": "/api/appendData.js"
     },
     {
-      "src": "/service-worker.js",
+      "src": "/sw.js",
       "headers": {
         "cache-control": "public, max-age=0, must-revalidate"
       },
-      "dest": "/service-worker.js"
+      "dest": "/sw.js"
     },
     {
-      "src": "/static/js/(.*)",
+      "src": "/static/(.*)",
       "headers": {
         "cache-control": "public, max-age=31536000"
       },
-      "dest": "/static/js/$1"
+      "dest": "/static/$1"
     },
     { "handle": "filesystem" },
     {

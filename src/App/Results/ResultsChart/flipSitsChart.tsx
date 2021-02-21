@@ -1,6 +1,6 @@
-import { parties, PartyId } from "api/parties"
 import { useState } from "react"
 import { Flipper, Flipped } from "react-flip-toolkit"
+import { parties, PartyId } from "@/api/parties"
 import { useCurrentResults } from "../state"
 
 const SitsChart = () => {
