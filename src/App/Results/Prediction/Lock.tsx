@@ -1,14 +1,13 @@
-import { PartyId } from "api/parties"
-import { useIsEditing, onToggleLock } from "../state/common"
-import { useIsLocked } from "./state.old"
+import { PartyId } from "@/api/parties"
+import { useIsResults } from "../components/ResultsOrPrediction"
 
 export const Lock: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
-  const isVisible = useIsEditing()
-  const isLocked = useIsLocked(partyId)
+  const isVisible = !useIsResults()
+  const isLocked = false // useIsLocked(partyId)
   return (
     <button
       onClick={() => {
-        onToggleLock(partyId)
+        // onToggleLock(partyId)
       }}
       className={`w-6 ${
         isLocked

@@ -1,66 +1,30 @@
-import { combineLatest, concat } from "rxjs"
-import { map, take, withLatestFrom } from "rxjs/operators"
-import { bind, Subscribe } from "@react-rxjs/core"
-import { parties, PartyId } from "api/parties"
-import { minMax$, multipliers$, prediction$ } from "./state.old"
-import { ProgressBar } from "components/progressBar"
+import { Subscribe } from "@react-rxjs/core"
+import { parties, PartyId } from "@/api/parties"
+import { ProgressBar } from "@/components/progressBar"
 import { useEffect, useRef } from "react"
-import { selectedProvince$ } from "../components/AreaPicker"
-import { recordEntries } from "utils/record-utils"
-import { add } from "utils/add"
 import { useIsEditingMe } from "./Edit"
+import {
+  editPartyPrediction,
+  partyPrediction$,
+  usePartyPrediction,
+} from "./state"
 
-const value$ = concat(
-  combineLatest([selectedProvince$, prediction$, currentParty$]).pipe(
-    withLatestFrom(multipliers$),
-    take(1),
-    map(([[province, predictions, partyId], multipliers]) => {
-      const res = province
-        ? predictions[province][partyId]
-        : recordEntries(predictions)
-            .filter(([, x]) => x[partyId])
-            .map(([province, x]) =>
-              multipliers.provinceToGeneral(x[partyId], province),
-            )
-            .reduce(add, 0)
-      return (res * 100).toFixed(2)
-    }),
-  ),
-  predictionInput$.pipe(
-    withLatestFrom(minMax$),
-    map(([x, { min, max }]) => {
-      const value = Number(x)
-      if (Number.isNaN(value)) return x
-      const finalValue = Math.max(min * 100, Math.min(value, max * 100))
-      return finalValue === value ? x : finalValue.toFixed(2)
-    }),
-  ),
-)
-
-const party$ = currentParty$.pipe(map((key) => parties[key]))
-
-const [useFormData, formData$] = bind(combineLatest([value$, party$]))
 function onDone(e: KeyboardEvent | React.KeyboardEvent<any>) {
   if (e.key === "Escape" || e.key === "Enter") {
-    onDoneEditing()
+    // onDoneEditing()
   }
 }
-const startManipulating = () => {
-  setIsManipulatinBar(true)
-}
-const stopManipulating = () => {
-  setIsManipulatinBar(false)
-}
 
-const FormBase: React.FC = () => {
-  const [value, party] = useFormData()
+const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
+  const party = parties[partyId]
+  const value = usePartyPrediction(partyId)
   const formRef = useRef<HTMLFormElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     inputRef.current?.focus()
     function onClickDocument(e: MouseEvent) {
       if (formRef.current && !formRef.current.contains(e.target as any)) {
-        onDoneEditing()
+        // onDoneEditing()
       }
     }
     document.addEventListener("click", onClickDocument)
@@ -75,7 +39,7 @@ const FormBase: React.FC = () => {
       ref={formRef}
       onSubmit={(e) => {
         e.preventDefault()
-        onDoneEditing()
+        // onDoneEditing()
       }}
       className="w-full flex flex-wrap"
     >
@@ -86,7 +50,7 @@ const FormBase: React.FC = () => {
       <div className="flex w-full flex-grow items-center">
         <ProgressBar
           className="rounded-md my-2 w-full flex-grow"
-          width={value}
+          width={value * 100}
           color={party.color}
         >
           <input
@@ -97,12 +61,17 @@ const FormBase: React.FC = () => {
             min="0"
             max={100}
             step={0.01}
-            value={value}
-            onMouseDown={startManipulating}
-            onTouchStart={startManipulating}
-            onTouchEnd={stopManipulating}
-            onMouseUp={stopManipulating}
-            onChange={(e) => onPredictionChange(e.target.value)}
+            value={(value * 100).toFixed()}
+            // onMouseDown={startManipulating}
+            // onTouchStart={startManipulating}
+            // onTouchEnd={stopManipulating}
+            // onMouseUp={stopManipulating}
+            onChange={(e) =>
+              editPartyPrediction({
+                party: partyId,
+                prediction: e.target.valueAsNumber,
+              })
+            }
           />
         </ProgressBar>
         <p className="flex-grow-0 flex ml-4">
@@ -114,10 +83,13 @@ const FormBase: React.FC = () => {
             min={0}
             max={100}
             step={0.01}
-            value={value}
-            onChange={(e) => {
-              onPredictionChange(e.target.value)
-            }}
+            value={(value * 100).toFixed(2)}
+            onChange={(e) =>
+              editPartyPrediction({
+                party: partyId,
+                prediction: e.target.valueAsNumber,
+              })
+            }
           />
           <span className="py-1">%</span>
         </p>
@@ -128,8 +100,8 @@ const FormBase: React.FC = () => {
 
 const Form: React.FC<{ partyId: PartyId }> = ({ partyId }) =>
   useIsEditingMe(partyId) ? (
-    <Subscribe source$={formData$}>
-      <FormBase />
+    <Subscribe source$={partyPrediction$(partyId)}>
+      <FormBase partyId={partyId} />
     </Subscribe>
   ) : null
 

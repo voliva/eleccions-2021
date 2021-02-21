@@ -13,13 +13,15 @@ export const editingParty$ = merge(
   doneEditing$.pipe(mapTo(null)),
 ).pipe(startWith(null), shareLatest())
 
-export const [useIsEditingMe] = bind((partyId: PartyId) =>
-  editingParty$.pipe(map((editing) => partyId === editing)),
+export const [useIsEditingMe] = bind(
+  (partyId: PartyId) =>
+    editingParty$.pipe(map((editing) => partyId === editing)),
+  false,
 )
 
 export const Edit: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
   const isEditingMe = useIsEditingMe(partyId)
-  const isVisible = useIsResults()
+  const isVisible = !useIsResults()
   const onClick = isEditingMe ? onDoneEditing : () => onEditParty(partyId)
 
   return (

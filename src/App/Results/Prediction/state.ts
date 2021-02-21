@@ -2,12 +2,12 @@ import { votes$ } from "@/api/votes"
 import { add } from "@/utils/add"
 import { bind, shareLatest } from "@react-rxjs/core"
 import { createListener } from "@react-rxjs/utils"
-import { PartyId } from "api/parties"
-import { Provinces } from "api/provinces"
+import { PartyId } from "@/api/parties"
+import { Provinces } from "@/api/provinces"
 import { combineLatest, merge } from "rxjs"
 import { map, mapTo, startWith, switchMap } from "rxjs/operators"
-import { mapRecord } from "utils/record-utils"
-import { reduceRecord } from "utils/reduceRecord"
+import { mapRecord } from "@/utils/record-utils"
+import { reduceRecord } from "@/utils/reduceRecord"
 import { selectedProvince$ } from "../components/AreaPicker"
 import { createResultStreams, totalCounts$ } from "../state/results"
 import { results$ } from "../state/state"
@@ -87,7 +87,12 @@ const activePrediction$ = selectedProvince$.pipe(
 )
 
 export const [usePartyPrediction, partyPrediction$] = bind((party: PartyId) =>
-  activePrediction$.pipe(map((prediction) => prediction[party])),
+  activePrediction$.pipe(
+    map((prediction) => {
+      console.log(prediction, party)
+      return prediction[party]
+    }),
+  ),
 )
 
 // Results
@@ -125,7 +130,7 @@ export const [usePartyPredictedResult, partyPredictedResult$] = bind(
 // Editing
 const [partyPredictionEdit$, editPartyPrediction] = createListener<{
   party: PartyId
-  province: Provinces | null
+  prediction: number
 }>()
 const [commitEdit$, commitEdit] = createListener()
 const [resetEdit$, resetEdit] = createListener()
