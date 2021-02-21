@@ -1,15 +1,27 @@
-import { FC, lazy, Suspense, useState } from "react"
-import { recordEntries, recordFromEntries } from "@/utils/record-utils"
+import { parties } from "@/api/parties"
 import { sitsByProvince, totalSits } from "@/api/provinces"
+import { recordEntries, recordFromEntries } from "@/utils/record-utils"
+import { bind } from "@react-rxjs/core"
+import { FC, lazy, Suspense, useState } from "react"
+import { map, switchMap } from "rxjs/operators"
+import { selectedProvince$, useSelectedProvince } from "../AreaPicker"
+import { useCurrentResults } from "../state"
+import { globalPercent$, percent$ } from "../state/results"
+import { GradientChart } from "./gradientChart"
 import { HalfDonut } from "./halfDonut"
 import { LineChart } from "./lineChart"
-import { useCurrentResults, usePercents, percents$ } from "../state"
-import { GradientChart } from "./gradientChart"
-import { useSelectedProvince } from "../AreaPicker"
-import { parties } from "@/api/parties"
 
 const sitsChartPromise = import("./flipSitsChart")
 const SitsChart = lazy(() => sitsChartPromise)
+
+const [usePercents, percents$] = bind(
+  selectedProvince$.pipe(
+    switchMap((province) =>
+      province ? percent$.pipe(map((v) => v[province])) : globalPercent$,
+    ),
+    map(({ counted, participation }) => [counted, participation]),
+  ),
+)
 
 export const resultsChart$ = percents$
 export const ResultsChart = () => {

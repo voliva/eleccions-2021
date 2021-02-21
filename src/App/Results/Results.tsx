@@ -1,12 +1,30 @@
-import { Subscribe } from "@react-rxjs/core"
+import { parties } from "@/api/parties"
+import { bind, Subscribe } from "@react-rxjs/core"
 // import { useIsResults } from "@/App/ResultsOrPrediction"
 import { Flipper, Flipped } from "react-flip-toolkit"
 import { merge } from "rxjs"
+import { map } from "rxjs/operators"
 import { AreaPicker } from "./AreaPicker"
 import { ResultRow } from "./ResultRow"
 import { ResultsChart, resultsChart$ } from "./ResultsChart"
-import { order$, useOrder } from "./state"
+import { currentResults$ } from "./state"
+import { PartyResults } from "./state/results"
 // import { onReset, useIsPristine } from "./state/common"
+
+const sortPartyResults = (a: PartyResults, b: PartyResults) =>
+  b.sits - a.sits ||
+  b.votes - a.votes ||
+  parties[a.id].name.localeCompare(parties[b.id].name)
+
+export const [useOrder, order$] = bind(
+  currentResults$.pipe(
+    map((res) =>
+      Object.values(res.parties)
+        .sort(sortPartyResults)
+        .map((x) => x.id),
+    ),
+  ),
+)
 
 const Parties: React.FC = () => {
   const partyIds = useOrder()
