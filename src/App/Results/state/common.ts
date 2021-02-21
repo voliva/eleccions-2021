@@ -1,22 +1,24 @@
-import { merge } from "rxjs"
-import { createListener } from "@react-rxjs/utils"
-import { bind } from "@react-rxjs/core"
-import { distinctUntilChanged, filter, map, mapTo } from "rxjs/operators"
-import { isResults$ } from "@/App/ResultsOrPrediction"
-import { Party, PartyId } from "@/api/parties"
-import { Votes } from "@/api/votes"
+import { PartyId } from "@/api/parties"
 import { Provinces } from "@/api/provinces"
-import { recordEntries } from "@/utils/record-utils"
+import { isResults$ } from "@/App/ResultsOrPrediction"
 import { add } from "@/utils/add"
+import { recordEntries } from "@/utils/record-utils"
+import { reduceRecord } from "@/utils/reduceRecord"
+import { bind } from "@react-rxjs/core"
+import { createListener } from "@react-rxjs/utils"
+import { merge } from "rxjs"
+import { distinctUntilChanged, filter, map, mapTo } from "rxjs/operators"
 
 export interface PartyResults {
-  party: Party
+  id: PartyId
   votes: number
   percent: number
   sits: number
 }
 
-export interface Results extends Omit<Votes, "parties"> {
+export interface Results {
+  nil: number
+  white: number
   parties: Record<PartyId, PartyResults>
   sits: string[]
 }
@@ -61,20 +63,19 @@ export const [
 ] = createListener<boolean>()
 
 export const mergeResults = (results: Record<Provinces, Results>) => {
-  const result = Object.values(results).reduce(
+  const result = reduceRecord(
+    results,
     (acc, current) => {
       acc.nil += current.nil
       acc.white += current.white
-      recordEntries(current.parties).forEach(
-        ([partyId, { party, votes, sits }]) => {
-          if (!acc.parties[partyId]) {
-            acc.parties[partyId] = { party, votes, sits, percent: 0 }
-          } else {
-            acc.parties[partyId].sits += sits
-            acc.parties[partyId].votes += votes
-          }
-        },
-      )
+      recordEntries(current.parties).forEach(([partyId, { votes, sits }]) => {
+        if (!acc.parties[partyId]) {
+          acc.parties[partyId] = { id: partyId, votes, sits, percent: 0 }
+        } else {
+          acc.parties[partyId].sits += sits
+          acc.parties[partyId].votes += votes
+        }
+      })
       return acc
     },
     { nil: 0, white: 0, parties: {} } as Results,

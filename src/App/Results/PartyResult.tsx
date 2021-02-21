@@ -1,17 +1,19 @@
-import { Party, PartyId } from "@/api/parties"
+import { parties, PartyId } from "@/api/parties"
+import { ProgressBar } from "@/components/progressBar"
+import { getTextColor } from "@/utils/color"
 import { formatNumber, formatPercent } from "@/utils/formatters"
 import { Link } from "react-router-dom"
-import { getTextColor } from "@/utils/color"
-import { ProgressBar } from "@/components/progressBar"
 
 export const PartyResult: React.FC<{
-  party: Party
+  partyId: PartyId
   sits: number
   votes: number
   percent: number
   linkToParty?: boolean
   onClickMiddle?: (party: PartyId) => void
-}> = ({ party, sits, votes, percent, linkToParty, onClickMiddle }) => {
+}> = ({ partyId, sits, votes, percent, linkToParty, onClickMiddle }) => {
+  const party = parties[partyId]
+
   const sitsElementProps = {
     className: `flex-grow-0 text-center ${getTextColor(
       party.color,

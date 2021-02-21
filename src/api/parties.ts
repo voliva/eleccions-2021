@@ -26,49 +26,13 @@ export enum PartyId {
   Vox = "vox",
 }
 
-/*
-export const missingParties: Record<Provinces, Set<PartyId>> = {
-  [Provinces.BCN]: new Set([
-    PartyId.AlianzaCV,
-    PartyId.EsconsEnBlanc,
-    PartyId.MCR,
-    PartyId.PUM_J,
-    PartyId.Scat,
-    PartyId.TerresEbre,
-    PartyId.Pensionistas,
-    PartyId.Unidos,
-  ]),
-  [Provinces.GIR]: new Set([
-    PartyId.EsconsEnBlanc,
-    PartyId.MCR,
-    PartyId.Scat,
-    PartyId.TerresEbre,
-    PartyId.Unidos,
-  ]),
-  [Provinces.LLE]: new Set([
-    PartyId.AlianzaCV,
-    PartyId.MCR,
-    PartyId.TerresEbre,
-    PartyId.Pensionistas,
-    PartyId.Unidos,
-  ]),
-  [Provinces.TAR]: new Set([
-    PartyId.AlianzaCV,
-    PartyId.EsconsEnBlanc,
-    PartyId.IZQP,
-    PartyId.Scat,
-    PartyId.Pensionistas,
-  ]),
-}
-*/
-
 export interface Party {
   id: PartyId
   name: string
   color: string
 }
 
-export const parties = mapRecord(
+export const parties: Record<PartyId, Party> = mapRecord(
   {
     [PartyId.Cs]: {
       name: "C's",

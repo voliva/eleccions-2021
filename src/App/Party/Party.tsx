@@ -64,7 +64,7 @@ const ProvinceResult: FC<{ province: Provinces | null; party: PartyId }> = ({
       <div className="text-center border-b border-current font-bold">
         {province === null ? "Catalunya" : province}
       </div>
-      {result && <PartyResult {...result} />}
+      {result && <PartyResult partyId={party} {...result} />}
     </div>
   )
 }

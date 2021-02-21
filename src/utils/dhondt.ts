@@ -30,11 +30,11 @@ function heapify(a: Array<{ party: string; votes: number }>) {
 }
 
 export function dhondt(
-  votes: Record<string, { votes: number }>,
+  votes: Record<string, number>,
   nSits: number,
   threshold: number,
 ) {
-  const inner = Object.entries(votes).map(([party, { votes }]) => ({
+  const inner = Object.entries(votes).map(([party, votes]) => ({
     party,
     votes: votes >= threshold ? votes : 0,
     split: 1,

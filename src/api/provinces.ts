@@ -1,3 +1,5 @@
+import { reduceRecord } from "@/utils/reduceRecord"
+
 export enum Provinces {
   BCN = "BCN",
   LLE = "LLE",
@@ -5,13 +7,13 @@ export enum Provinces {
   TAR = "TAR",
 }
 
-export const sitsByProvince: Record<Provinces | "CAT", number> = {
+export const sitsByProvince: Record<Provinces, number> = {
   [Provinces.BCN]: 85,
   [Provinces.TAR]: 18,
   [Provinces.GIR]: 17,
   [Provinces.LLE]: 15,
-  CAT: 135,
 }
+export const totalSits = reduceRecord(sitsByProvince, (acc, v) => acc + v, 0)
 
 export const provinceNames: Record<Provinces, string> = {
   [Provinces.BCN]: "Barcelona",

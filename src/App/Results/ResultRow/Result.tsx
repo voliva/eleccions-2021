@@ -7,5 +7,12 @@ export const result$ = getPartyResult$
 export const Result: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
   const result = usePartyResult(partyId)
   const onClick = useIsEditing() ? onEditParty : undefined
-  return <PartyResult onClickMiddle={onClick} {...result} linkToParty />
+  return (
+    <PartyResult
+      onClickMiddle={onClick}
+      partyId={partyId}
+      {...result}
+      linkToParty
+    />
+  )
 }

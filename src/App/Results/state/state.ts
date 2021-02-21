@@ -1,30 +1,18 @@
-import { bind } from "@react-rxjs/core"
-import { PartyId } from "api/parties"
-import { Provinces } from "api/provinces"
-import { isResults$ } from "@/App/ResultsOrPrediction"
-import { combineLatest, from } from "rxjs"
-import { map, mergeMap, scan, startWith, switchMap } from "rxjs/operators"
-import { selectedProvince$ } from "../AreaPicker"
-import { getResultsByProvince } from "./results"
-import { PartyResults, isManipulatingBar$ } from "./common"
-import { deferredPrediction } from "../Prediction"
 import { participation$ } from "@/api/participation"
 import { votes$ } from "@/api/votes"
+import { add } from "@/utils/add"
 import { mapRecord } from "@/utils/record-utils"
+import { reduceRecord } from "@/utils/reduceRecord"
+import { bind } from "@react-rxjs/core"
+import { parties, PartyId } from "@/api/parties"
+import { Provinces } from "@/api/provinces"
+import { combineLatest } from "rxjs"
+import { map, scan, startWith, switchMap } from "rxjs/operators"
+import { selectedProvince$ } from "../AreaPicker"
+import { isManipulatingBar$, PartyResults } from "./common"
+import { getResultsByProvince } from "./results"
 
-const getPredictionResultsByProvince = (province: Provinces | null) =>
-  from(deferredPrediction).pipe(
-    mergeMap((x) => x.getPredictionResultsByProvince(province)),
-  )
-
-export const getCurrentResults = (province: Provinces | null) =>
-  isResults$.pipe(
-    switchMap((isResults) =>
-      (isResults ? getResultsByProvince : getPredictionResultsByProvince)(
-        province,
-      ),
-    ),
-  )
+export const getCurrentResults = getResultsByProvince
 
 export const [useCurrentResults, currentResults$] = bind(
   selectedProvince$.pipe(switchMap(getCurrentResults)),
@@ -33,12 +21,12 @@ export const [useCurrentResults, currentResults$] = bind(
 const sortPartyResults = (a: PartyResults, b: PartyResults) =>
   b.sits - a.sits ||
   b.votes - a.votes ||
-  a.party.name.localeCompare(b.party.name)
+  parties[a.id].name.localeCompare(parties[b.id].name)
 const actualOrder$ = currentResults$.pipe(
   map((res) =>
     Object.values(res.parties)
       .sort(sortPartyResults)
-      .map((x) => x.party.id),
+      .map((x) => x.id),
   ),
 )
 
@@ -70,7 +58,7 @@ const percents_$ = combineLatest([participation$, votes$]).pipe(
 
     let totalCounted = 0
     const countedPercents = mapRecord(votes, (x, province) => {
-      const total = x.nil + x.partyVotes + x.white
+      const total = x.nil + reduceRecord(x.parties, add, 0) + x.white
       totalCounted += total
       return total && total / participation[province].nVoters
     }) as Record<Provinces | "CAT", number>

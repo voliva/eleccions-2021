@@ -1,11 +1,12 @@
 import { FC, lazy, Suspense, useState } from "react"
-import { recordFromEntries } from "@/utils/record-utils"
-import { sitsByProvince } from "@/api/provinces"
+import { recordEntries, recordFromEntries } from "@/utils/record-utils"
+import { sitsByProvince, totalSits } from "@/api/provinces"
 import { HalfDonut } from "./halfDonut"
 import { LineChart } from "./lineChart"
 import { useCurrentResults, usePercents, percents$ } from "../state"
 import { GradientChart } from "./gradientChart"
 import { useSelectedProvince } from "../AreaPicker"
+import { parties } from "@/api/parties"
 
 const sitsChartPromise = import("./flipSitsChart")
 const SitsChart = lazy(() => sitsChartPromise)
@@ -69,8 +70,8 @@ const Chart: FC<{ counted: string }> = ({ counted, children }) => {
 const LinearParlament: FC<{ onClick?: () => void }> = ({ onClick }) => {
   const results = useCurrentResults()
   const chartResults = recordFromEntries(
-    Object.values(results.parties).map((result) => [
-      result.party.color,
+    recordEntries(results.parties).map(([id, result]) => [
+      parties[id].color,
       result.sits,
     ]),
   )
@@ -80,16 +81,14 @@ const LinearParlament: FC<{ onClick?: () => void }> = ({ onClick }) => {
 
 const DetailView = () => {
   const selectedProvince = useSelectedProvince()
-  const totalSits = selectedProvince
-    ? sitsByProvince[selectedProvince]
-    : sitsByProvince.CAT
+  const sits = selectedProvince ? sitsByProvince[selectedProvince] : totalSits
   const results = useCurrentResults()
-  const relevantParties = Object.values(results.parties)
-    .filter((p) => p.sits > 0)
-    .sort((a, b) => b.sits - a.sits || b.votes - a.votes)
+  const relevantParties = recordEntries(results.parties)
+    .filter(([, p]) => p.sits > 0)
+    .sort(([, a], [, b]) => b.sits - a.sits || b.votes - a.votes)
 
   const chartResults = recordFromEntries(
-    relevantParties.map((result) => [result.party.color, result.sits]),
+    relevantParties.map(([id, result]) => [parties[id].color, result.sits]),
   )
 
   return (
@@ -101,18 +100,18 @@ const DetailView = () => {
       ) : (
         <HalfDonut
           results={chartResults}
-          total={totalSits}
+          total={sits}
           className="mx-auto my-1 max-w-lg"
         />
       )}
       <ul className="flex flex-wrap justify-center">
-        {relevantParties.map((p) => (
-          <li className="text-sm px-2" key={p.party.id}>
+        {relevantParties.map(([id, p]) => (
+          <li className="text-sm px-2" key={id}>
             <div
               className="p-1 mr-1 inline-block border border-black"
-              style={{ backgroundColor: p.party.color }}
+              style={{ backgroundColor: parties[id].color }}
             />
-            {p.party.name}
+            {parties[id].name}
           </li>
         ))}
       </ul>

@@ -16,9 +16,9 @@ const SitsChart = () => {
         return [p, p + "," + pCounts[p]++] as const
       })
     }
-    const partySits = Object.values(results.parties)
-      .filter((p) => p.sits >= 1)
-      .map((party) => [party.party.id, party.sits] as const)
+    const partySits = Object.entries(results.parties)
+      .filter(([, p]) => p.sits >= 1)
+      .map(([id, party]) => [id, party.sits] as const)
       .sort((a, b) => b[1] - a[1])
     const result: [string, string][] = []
     partySits.forEach(([party, sits]) => {

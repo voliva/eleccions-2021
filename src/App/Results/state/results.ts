@@ -6,17 +6,24 @@ import { Votes, votes$ } from "@/api/votes"
 import { dhondt } from "@/utils/dhondt"
 import { shareLatest } from "@react-rxjs/core"
 import { mergeResults, Results } from "./common"
+import { reduceRecord } from "@/utils/reduceRecord"
 
 const getProvinceResults = (votes: Votes, province: Provinces): Results => {
-  const validVotes = votes.white + votes.partyVotes
+  const validVotes =
+    votes.white + reduceRecord(votes.parties, (acc, v) => acc + v, 0)
 
   const nSits = sitsByProvince[province]
   const threshold = Math.round(validVotes * 0.03)
 
-  const parties = mapRecord(votes.parties, (x) => ({ ...x, sits: 0 }))
+  const parties = mapRecord(votes.parties, (votes, id) => ({
+    votes,
+    percent: votes / validVotes,
+    sits: 0,
+    id,
+  }))
   let sits: string[] = []
   if (validVotes) {
-    sits = dhondt(parties, nSits, threshold).map(([party]) => party)
+    sits = dhondt(votes.parties, nSits, threshold).map(([party]) => party)
     sits.forEach((party) => {
       parties[party as PartyId].sits++
     })

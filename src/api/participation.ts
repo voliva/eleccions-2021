@@ -4,23 +4,13 @@ import { distinctUntilChanged, map } from "rxjs/operators"
 import { mapRecord } from "@/utils/record-utils"
 import { Provinces } from "./provinces"
 import { source$ } from "./source"
+import { reduceRecord } from "@/utils/reduceRecord"
 
 export interface Participation {
   nVoters: number
   nNonVoters: number
 }
 
-/* for simulating 100% count:
- votes$.pipe(
-  map((votes) =>
-    mapRecord(votes, (x) => {
-      const nVoters = x.nil + x.white + x.partyVotes
-      return { nVoters, nNonVoters: nVoters * 0.5 }
-    }),
-  ),
-  shareLatest(),
-)
- */
 export const participation$: Observable<
   Record<Provinces, Participation>
 > = source$.pipe(
@@ -35,21 +25,25 @@ export const participation$: Observable<
   ),
   shareLatest(),
 )
-
-export const [useParticipation, getParticipation$] = bind(
-  (province?: Provinces) =>
-    participation$.pipe(
-      province
-        ? map((x) => x[province])
-        : map((data) =>
-            Object.values(data).reduce(
-              (acc, current) => {
-                acc.nNonVoters += current.nNonVoters
-                acc.nVoters += current.nVoters
-                return acc
-              },
-              { nVoters: 0, nNonVoters: 0 },
-            ),
-          ),
+const globalParticipation$ = participation$.pipe(
+  map((participation) =>
+    reduceRecord(
+      participation,
+      (acc, current) => {
+        acc.nNonVoters += current.nNonVoters
+        acc.nVoters += current.nVoters
+        return acc
+      },
+      { nVoters: 0, nNonVoters: 0 },
     ),
+  ),
+)
+
+export const [
+  useParticipation,
+  getParticipation$,
+] = bind((province?: Provinces) =>
+  province
+    ? participation$.pipe(map((x) => x[province]))
+    : globalParticipation$,
 )
