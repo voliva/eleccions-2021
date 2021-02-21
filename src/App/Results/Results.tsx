@@ -4,9 +4,10 @@ import { bind, Subscribe } from "@react-rxjs/core"
 import { Flipper, Flipped } from "react-flip-toolkit"
 import { merge } from "rxjs"
 import { map } from "rxjs/operators"
-import { AreaPicker } from "./AreaPicker"
-import { ResultRow } from "./ResultRow"
-import { ResultsChart, resultsChart$ } from "./ResultsChart"
+import { AreaPicker } from "./components/AreaPicker"
+import { ResultRow } from "./components/ResultRow"
+import { ResultsChart, resultsChart$ } from "./components/ResultsChart"
+import { ResultsOrPrediction } from "./components/ResultsOrPrediction"
 import { currentResults$ } from "./state"
 import { PartyResults } from "./state/results"
 // import { onReset, useIsPristine } from "./state/common"
@@ -66,6 +67,7 @@ const $results = merge(order$, resultsChart$)
 export const Results: React.FC = () => {
   return (
     <Subscribe source$={$results}>
+      <ResultsOrPrediction />
       <AreaPicker />
       <main>
         <ResultsChart />

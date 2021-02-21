@@ -9,10 +9,15 @@ export const reduceRecord = <
     index: number,
     keys: Array<keyof TSource>,
   ) => TResult,
-  initialValue: TResult,
+  initialValue?: TResult,
   keys: Array<keyof TSource> = Object.keys(source),
-) =>
-  keys.reduce(
-    (acc, key, idx) => reducer(acc, source[key] as any, idx, keys),
-    initialValue,
-  )
+): TResult =>
+  initialValue !== undefined
+    ? keys.reduce(
+        (acc, key, idx) => reducer(acc, source[key] as any, idx, keys),
+        initialValue,
+      )
+    : ((keys.reduce(
+        (acc, key, idx) =>
+          reducer(acc as any, source[key] as any, idx, keys) as any,
+      ) as any) as TResult)

@@ -102,7 +102,7 @@ export const createResultStreams = (
   }
 }
 
-const totalCounts$ = combineLatest([participation$, votes$]).pipe(
+export const totalCounts$ = combineLatest([participation$, votes$]).pipe(
   map(([participation, votes]) =>
     mapRecord(participation, ({ nVoters, nNonVoters }, province) => {
       const provinceVotes = votes[province]

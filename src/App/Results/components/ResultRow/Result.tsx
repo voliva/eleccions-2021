@@ -1,8 +1,8 @@
 import { PartyId } from "@/api/parties"
 import { bind } from "@react-rxjs/core"
 import { map } from "rxjs/operators"
-import { PartyResult } from "../PartyResult"
-import { currentResults$ } from "../state"
+import { PartyResult } from "../../PartyResult"
+import { currentResults$ } from "../../state"
 
 export const [usePartyResult, partyResult$] = bind((id: PartyId) =>
   currentResults$.pipe(map((res) => res.parties[id])),

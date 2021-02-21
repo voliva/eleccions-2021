@@ -1,5 +1,4 @@
 import { Results } from "./Results"
-// import { ResultsOrPrediction } from "./ResultsOrPrediction"
 import { Router, Switch, Route } from "react-router-dom"
 // import { lazy, Suspense } from "react"
 import { history } from "./history"
@@ -18,7 +17,6 @@ export function App() {
       <Switch>
         {/* <Route path="/party/:id" component={Party} /> */}
         <Route>
-          {/* <ResultsOrPrediction /> */}
           <Results />
         </Route>
       </Switch>
