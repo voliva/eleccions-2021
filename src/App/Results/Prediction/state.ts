@@ -1,4 +1,4 @@
-import { votes$ } from "@/api/votes"
+import { Votes, votes$ } from "@/api/votes"
 import { add } from "@/utils/add"
 import { bind, shareLatest } from "@react-rxjs/core"
 import { createListener } from "@react-rxjs/utils"
@@ -10,23 +10,25 @@ import { mapRecord } from "@/utils/record-utils"
 import { reduceRecord } from "@/utils/reduceRecord"
 import { selectedProvince$ } from "../components/AreaPicker"
 import { createResultStreams, totalCounts$ } from "../state/results"
-import { results$ } from "../state/state"
 
 type Prediction = Record<Provinces, Record<PartyId, number>>
 
-const automaticPrediction$ = results$.pipe(
+const votesWithPartyVotes$ = votes$.pipe(
+  map((provinces) =>
+    mapRecord(provinces, (results) => ({
+      ...results,
+      partyVotes: reduceRecord(results.parties, add),
+    })),
+  ),
+)
+
+// Decision: % whites and nils remains constant, user selects part from 0->100% of not counted party votes (totalVotes - estimatedWhite - estimatedNil)
+const automaticPrediction$ = votesWithPartyVotes$.pipe(
   map(
     (provinces): Prediction =>
-      mapRecord(provinces, (results) => {
-        const partyVotes = reduceRecord(
-          results.parties,
-          (acc, party) => acc + party.votes,
-          0,
-        )
-        const validVotes = partyVotes + results.white
-
-        return mapRecord(results.parties, ({ votes }) => votes / validVotes)
-      }),
+      mapRecord(provinces, ({ parties, partyVotes }) =>
+        mapRecord(parties, (votes) => votes / partyVotes),
+      ),
   ),
 )
 
@@ -54,26 +56,43 @@ const visiblePrediction$ = combineLatest([
 const globalPrediction$ = combineLatest([
   visiblePrediction$,
   totalCounts$,
+  votesWithPartyVotes$,
 ]).pipe(
-  map(([prediction, counts]) => {
+  map(([prediction, counts, results]) => {
     const toCount = mapRecord(
       counts,
       ({ nVoters, counted }) => nVoters - counted,
     )
+
+    // Assume %nils and %whites remains constant throughout counts
+    const noPartyCount = mapRecord(
+      results,
+      ({ partyVotes, white, nil }, province) => {
+        const totalVotes = partyVotes + white + nil
+        return ((white + nil) / totalVotes) * toCount[province]
+      },
+    )
+
     const votesPredicted = mapRecord(
       prediction,
       (provincePrediction, province) =>
-        mapRecord(provincePrediction, (p) => toCount[province] * p),
+        mapRecord(
+          provincePrediction,
+          (prediction) =>
+            (toCount[province] - noPartyCount[province]) * prediction,
+        ),
     )
-    const globalVotesPredicted = reduceRecord(votesPredicted, (acc, votes) =>
-      mapRecord(acc, (v, party) => v + votes[party]),
-    )
+    const globalVotesPredicted = reduceRecord(votesPredicted, (acc, votes) => ({
+      ...acc,
+      ...mapRecord(votes, (v, party) => v + (acc[party] || 0)),
+    }))
     const totalVotesPredicted = reduceRecord(globalVotesPredicted, add)
 
-    return mapRecord(
+    const result = mapRecord(
       globalVotesPredicted,
       (votes) => votes / totalVotesPredicted,
     )
+    return result
   }),
 )
 
@@ -87,31 +106,37 @@ const activePrediction$ = selectedProvince$.pipe(
 )
 
 export const [usePartyPrediction, partyPrediction$] = bind((party: PartyId) =>
-  activePrediction$.pipe(
-    map((prediction) => {
-      console.log(prediction, party)
-      return prediction[party]
-    }),
-  ),
+  activePrediction$.pipe(map((prediction) => prediction[party])),
 )
 
 // Results
 const visiblePredictionVotes$ = combineLatest([
-  votes$,
+  votesWithPartyVotes$,
   totalCounts$,
   visiblePrediction$,
 ]).pipe(
   map(([votes, counts, prediction]) =>
-    mapRecord(votes, (provinceVotes, province) => {
-      const votesPending = counts[province].nVoters - counts[province].nVoters
-      return {
-        ...provinceVotes,
-        parties: mapRecord(
-          provinceVotes.parties,
-          (v, party) => v + prediction[province][party] * votesPending,
-        ),
-      }
-    }),
+    mapRecord(
+      votes,
+      (provinceVotes, province): Votes => {
+        const votesPending = counts[province].nVoters - counts[province].nVoters
+        const totalVotes =
+          provinceVotes.nil + provinceVotes.white + provinceVotes.partyVotes
+        const nilPct = provinceVotes.nil / totalVotes
+        const whitePct = provinceVotes.white / totalVotes
+        const partyPct = 1 - nilPct - whitePct
+
+        return {
+          nil: provinceVotes.nil + votesPending * nilPct,
+          white: provinceVotes.white + votesPending * whitePct,
+          parties: mapRecord(
+            provinceVotes.parties,
+            (v, party) =>
+              v + prediction[province][party] * votesPending * partyPct,
+          ),
+        }
+      },
+    ),
   ),
 )
 

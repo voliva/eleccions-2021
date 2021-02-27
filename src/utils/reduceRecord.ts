@@ -17,7 +17,10 @@ export const reduceRecord = <
         (acc, key, idx) => reducer(acc, source[key] as any, idx, keys),
         initialValue,
       )
-    : ((keys.reduce(
-        (acc, key, idx) =>
-          reducer(acc as any, source[key] as any, idx, keys) as any,
-      ) as any) as TResult)
+    : (keys
+        .slice(1)
+        .reduce(
+          (acc, key, idx) =>
+            reducer(acc as any, source[key] as any, idx, keys) as any,
+          source[keys[0]],
+        ) as any)
