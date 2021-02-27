@@ -1,13 +1,13 @@
-import { Votes, votes$ } from "@/api/votes"
-import { add } from "@/utils/add"
-import { bind, shareLatest } from "@react-rxjs/core"
-import { createListener } from "@react-rxjs/utils"
 import { PartyId } from "@/api/parties"
 import { Provinces } from "@/api/provinces"
-import { combineLatest, merge } from "rxjs"
-import { map, mapTo, startWith, switchMap } from "rxjs/operators"
+import { Votes, votes$ } from "@/api/votes"
+import { add } from "@/utils/add"
 import { mapRecord } from "@/utils/record-utils"
 import { reduceRecord } from "@/utils/reduceRecord"
+import { bind, shareLatest } from "@react-rxjs/core"
+import { createListener } from "@react-rxjs/utils"
+import { combineLatest, merge } from "rxjs"
+import { map, mapTo, startWith, switchMap } from "rxjs/operators"
 import { selectedProvince$ } from "../components/AreaPicker"
 import { createResultStreams, totalCounts$ } from "../state/results"
 
@@ -119,7 +119,7 @@ const visiblePredictionVotes$ = combineLatest([
     mapRecord(
       votes,
       (provinceVotes, province): Votes => {
-        const votesPending = counts[province].nVoters - counts[province].nVoters
+        const votesPending = counts[province].nVoters - counts[province].counted
         const totalVotes =
           provinceVotes.nil + provinceVotes.white + provinceVotes.partyVotes
         const nilPct = provinceVotes.nil / totalVotes
@@ -127,12 +127,13 @@ const visiblePredictionVotes$ = combineLatest([
         const partyPct = 1 - nilPct - whitePct
 
         return {
-          nil: provinceVotes.nil + votesPending * nilPct,
-          white: provinceVotes.white + votesPending * whitePct,
+          nil: provinceVotes.nil + Math.round(votesPending * nilPct),
+          white: provinceVotes.white + Math.round(votesPending * whitePct),
           parties: mapRecord(
             provinceVotes.parties,
             (v, party) =>
-              v + prediction[province][party] * votesPending * partyPct,
+              v +
+              Math.round(prediction[province][party] * votesPending * partyPct),
           ),
         }
       },
@@ -144,12 +145,9 @@ const { getResults$: visiblePredictedResult$ } = createResultStreams(
   visiblePredictionVotes$,
 )
 
-export const [usePartyPredictedResult, partyPredictedResult$] = bind(
-  (party: PartyId) =>
-    selectedProvince$.pipe(
-      switchMap(visiblePredictedResult$),
-      map((results) => results.parties[party]),
-    ),
+export const predictedResult$ = selectedProvince$.pipe(
+  switchMap(visiblePredictedResult$),
+  shareLatest(),
 )
 
 // Editing

@@ -7,8 +7,10 @@ import { map } from "rxjs/operators"
 import { AreaPicker } from "./components/AreaPicker"
 import { ResultRow } from "./components/ResultRow"
 import { ResultsChart, resultsChart$ } from "./components/ResultsChart"
-import { ResultsOrPrediction } from "./components/ResultsOrPrediction"
-import { currentResults$ } from "./state"
+import {
+  ResultsOrPrediction,
+  selectedResults$,
+} from "./components/ResultsOrPrediction"
 import { PartyResults } from "./state/results"
 // import { onReset, useIsPristine } from "./state/common"
 
@@ -18,7 +20,7 @@ const sortPartyResults = (a: PartyResults, b: PartyResults) =>
   parties[a.id].name.localeCompare(parties[b.id].name)
 
 export const [useOrder, order$] = bind(
-  currentResults$.pipe(
+  selectedResults$.pipe(
     map((res) =>
       Object.values(res.parties)
         .sort(sortPartyResults)

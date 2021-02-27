@@ -1,6 +1,9 @@
 import { bind } from "@react-rxjs/core"
 import { createListener } from "@react-rxjs/utils"
 import { merge } from "rxjs"
+import { switchMap } from "rxjs/operators"
+import { predictedResult$ } from "../../Prediction/state"
+import { currentResults$ } from "../../state"
 
 const [selectResults$, onSelectResults] = createListener(() => true)
 const [selectPrediction$, onSelectPrediction] = createListener(() => false)
@@ -8,6 +11,10 @@ const [selectPrediction$, onSelectPrediction] = createListener(() => false)
 export const [useIsResults, isResults$] = bind(
   merge(selectResults$, selectPrediction$),
   true,
+)
+
+export const selectedResults$ = isResults$.pipe(
+  switchMap((isResults) => (isResults ? currentResults$ : predictedResult$)),
 )
 
 export const ResultsOrPrediction: React.FC = () => {
