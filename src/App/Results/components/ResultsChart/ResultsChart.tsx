@@ -5,11 +5,12 @@ import { bind } from "@react-rxjs/core"
 import { FC, lazy, Suspense, useState } from "react"
 import { map, switchMap } from "rxjs/operators"
 import { selectedProvince$, useSelectedProvince } from "../AreaPicker"
-import { useCurrentResults } from "../../state"
 import { globalPercent$, percent$ } from "../../state/results"
 import { GradientChart } from "./gradientChart"
 import { HalfDonut } from "./halfDonut"
 import { LineChart } from "./lineChart"
+import { selectedResults$ } from "../ResultsOrPrediction"
+import { merge } from "rxjs"
 
 const sitsChartPromise = import("./flipSitsChart")
 const SitsChart = lazy(() => sitsChartPromise)
@@ -23,7 +24,8 @@ const [usePercents, percents$] = bind(
   ),
 )
 
-export const resultsChart$ = percents$
+const [useCurrentResults, currentResults$] = bind(selectedResults$)
+export const resultsChart$ = merge(percents$, currentResults$)
 export const ResultsChart = () => {
   const [counted, participation] = usePercents().map((x) =>
     (x * 100).toFixed(2),

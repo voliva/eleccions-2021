@@ -1,4 +1,4 @@
-import { PartyId } from "@/api/parties"
+import { Party, PartyId } from "@/api/parties"
 import { Provinces } from "@/api/provinces"
 import { Votes, votes$ } from "@/api/votes"
 import { add } from "@/utils/add"
@@ -6,8 +6,16 @@ import { mapRecord } from "@/utils/record-utils"
 import { reduceRecord } from "@/utils/reduceRecord"
 import { bind, shareLatest } from "@react-rxjs/core"
 import { createListener } from "@react-rxjs/utils"
-import { combineLatest, merge } from "rxjs"
-import { map, mapTo, startWith, switchMap } from "rxjs/operators"
+import { combineLatest, merge, Observable } from "rxjs"
+import {
+  filter,
+  map,
+  mapTo,
+  startWith,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from "rxjs/operators"
 import { selectedProvince$ } from "../components/AreaPicker"
 import { createResultStreams, totalCounts$ } from "../state/results"
 
@@ -32,21 +40,27 @@ const automaticPrediction$ = votesWithPartyVotes$.pipe(
   ),
 )
 
-const [predictionCommit$, commitPrediction] = createListener<Prediction>()
+const [predictionEdit$, editPrediction] = createListener<Prediction>()
+const editedPrediction$ = predictionEdit$.pipe(startWith(null), shareLatest())
+
+const [predictionCommit$, commitPrediction] = createListener()
 const [predictionReset$, resetPrediction] = createListener()
 const commitedPrediction$ = merge(
-  predictionCommit$,
+  predictionCommit$.pipe(
+    withLatestFrom(predictionEdit$),
+    map(([_, p]) => p),
+  ),
   predictionReset$.pipe(mapTo(null)),
 ).pipe(startWith(null), shareLatest())
 
+export { commitPrediction, resetPrediction }
+
 // Used as a baseline for editing, so the same value always yields the same result
+// Also used for the order: This way it doesn't change while the user is editing
 const initialPrediction$ = combineLatest([
   automaticPrediction$,
   commitedPrediction$,
 ]).pipe(map(([automatic, commited]) => commited || automatic))
-
-const [predictionEdit$, editPrediction] = createListener<Prediction>()
-const editedPrediction$ = predictionEdit$.pipe(startWith(null), shareLatest())
 
 const visiblePrediction$ = combineLatest([
   initialPrediction$,
@@ -110,39 +124,17 @@ export const [usePartyPrediction, partyPrediction$] = bind((party: PartyId) =>
 )
 
 // Results
-const visiblePredictionVotes$ = combineLatest([
-  votesWithPartyVotes$,
-  totalCounts$,
-  visiblePrediction$,
-]).pipe(
-  map(([votes, counts, prediction]) =>
-    mapRecord(
-      votes,
-      (provinceVotes, province): Votes => {
-        const votesPending = counts[province].nVoters - counts[province].counted
-        const totalVotes =
-          provinceVotes.nil + provinceVotes.white + provinceVotes.partyVotes
-        const nilPct = provinceVotes.nil / totalVotes
-        const whitePct = provinceVotes.white / totalVotes
-        const partyPct = 1 - nilPct - whitePct
-
-        return {
-          nil: provinceVotes.nil + Math.round(votesPending * nilPct),
-          white: provinceVotes.white + Math.round(votesPending * whitePct),
-          parties: mapRecord(
-            provinceVotes.parties,
-            (v, party) =>
-              v +
-              Math.round(prediction[province][party] * votesPending * partyPct),
-          ),
-        }
-      },
-    ),
-  ),
+const { getResults$: initialPredictedResult$ } = predictionToResult$(
+  initialPrediction$,
 )
 
-const { getResults$: visiblePredictedResult$ } = createResultStreams(
-  visiblePredictionVotes$,
+export const commitedResult$ = selectedProvince$.pipe(
+  switchMap(initialPredictedResult$),
+  shareLatest(),
+)
+
+const { getResults$: visiblePredictedResult$ } = predictionToResult$(
+  visiblePrediction$,
 )
 
 export const predictedResult$ = selectedProvince$.pipe(
@@ -150,12 +142,104 @@ export const predictedResult$ = selectedProvince$.pipe(
   shareLatest(),
 )
 
-// Editing
+// Editing specific parties
 const [partyPredictionEdit$, editPartyPrediction] = createListener<{
   party: PartyId
   prediction: number
 }>()
-const [commitEdit$, commitEdit] = createListener()
-const [resetEdit$, resetEdit] = createListener()
+export { editPartyPrediction }
 
-export { editPartyPrediction, commitEdit, resetEdit }
+partyPredictionEdit$
+  .pipe(
+    withLatestFrom(combineLatest([selectedProvince$, initialPrediction$])),
+    map(([edit, [province, initialPrediction]]) => ({
+      edit,
+      province,
+      initialPrediction,
+    })),
+    // Only considering specific provinces for now
+    filter(({ province }) => !!province),
+    map(({ edit, province, initialPrediction }) => {
+      const {
+        [province!]: targetInitialPrediction,
+        ...rest
+      } = initialPrediction
+      const restProvinces = rest as Prediction
+
+      return {
+        ...restProvinces,
+        [province!]: editPercent(
+          targetInitialPrediction,
+          edit.party,
+          edit.prediction / 100,
+        ),
+      }
+    }),
+  )
+  .subscribe(editPrediction)
+
+function editPercent(
+  initialPrediction: Record<PartyId, number>,
+  partyId: PartyId,
+  prediction: number,
+): Record<PartyId, number> {
+  const { [partyId]: targetInitialPrediction, ...rest } = initialPrediction
+  const movableParties = rest as typeof initialPrediction
+
+  const totalMovableParties = reduceRecord(movableParties, add)
+  const targetDiff = prediction - targetInitialPrediction
+
+  let given = 0
+  const movablePredictions = mapRecord(movableParties, (initial) => {
+    const result = Math.max(
+      0,
+      initial - (targetDiff * initial) / totalMovableParties,
+    )
+    given += initial - result
+    return result
+  })
+
+  const result = {
+    ...movablePredictions,
+    [partyId]: targetInitialPrediction + given,
+  }
+
+  return result
+}
+
+function predictionToResult$(prediction$: Observable<Prediction>) {
+  const predictedVotes$ = combineLatest([
+    votesWithPartyVotes$,
+    totalCounts$,
+    prediction$,
+  ]).pipe(
+    map(([votes, counts, prediction]) =>
+      mapRecord(
+        votes,
+        (provinceVotes, province): Votes => {
+          const votesPending =
+            counts[province].nVoters - counts[province].counted
+          const totalVotes =
+            provinceVotes.nil + provinceVotes.white + provinceVotes.partyVotes
+          const nilPct = provinceVotes.nil / totalVotes
+          const whitePct = provinceVotes.white / totalVotes
+          const partyPct = 1 - nilPct - whitePct
+
+          return {
+            nil: provinceVotes.nil + Math.round(votesPending * nilPct),
+            white: provinceVotes.white + Math.round(votesPending * whitePct),
+            parties: mapRecord(
+              provinceVotes.parties,
+              (v, party) =>
+                v +
+                Math.round(
+                  prediction[province][party] * votesPending * partyPct,
+                ),
+            ),
+          }
+        },
+      ),
+    ),
+  )
+  return createResultStreams(predictedVotes$)
+}

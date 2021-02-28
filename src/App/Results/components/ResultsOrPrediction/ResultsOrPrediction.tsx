@@ -2,7 +2,7 @@ import { bind } from "@react-rxjs/core"
 import { createListener } from "@react-rxjs/utils"
 import { merge } from "rxjs"
 import { switchMap } from "rxjs/operators"
-import { predictedResult$ } from "../../Prediction/state"
+import { commitedResult$, predictedResult$ } from "../../Prediction/state"
 import { currentResults$ } from "../../state"
 
 const [selectResults$, onSelectResults] = createListener(() => true)
@@ -15,6 +15,9 @@ export const [useIsResults, isResults$] = bind(
 
 export const selectedResults$ = isResults$.pipe(
   switchMap((isResults) => (isResults ? currentResults$ : predictedResult$)),
+)
+export const selectedInitialResult$ = isResults$.pipe(
+  switchMap((isResults) => (isResults ? currentResults$ : commitedResult$)),
 )
 
 export const ResultsOrPrediction: React.FC = () => {

@@ -9,7 +9,7 @@ import { ResultRow } from "./components/ResultRow"
 import { ResultsChart, resultsChart$ } from "./components/ResultsChart"
 import {
   ResultsOrPrediction,
-  selectedResults$,
+  selectedInitialResult$,
 } from "./components/ResultsOrPrediction"
 import { PartyResults } from "./state/results"
 // import { onReset, useIsPristine } from "./state/common"
@@ -20,7 +20,7 @@ const sortPartyResults = (a: PartyResults, b: PartyResults) =>
   parties[a.id].name.localeCompare(parties[b.id].name)
 
 export const [useOrder, order$] = bind(
-  selectedResults$.pipe(
+  selectedInitialResult$.pipe(
     map((res) =>
       Object.values(res.parties)
         .sort(sortPartyResults)
