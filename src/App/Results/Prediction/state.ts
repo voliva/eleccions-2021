@@ -171,7 +171,7 @@ partyPredictionEdit$
         [province!]: editPercent(
           targetInitialPrediction,
           edit.party,
-          edit.prediction / 100,
+          edit.prediction,
         ),
       }
     }),

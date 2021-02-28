@@ -1,7 +1,7 @@
 import { Subscribe } from "@react-rxjs/core"
 import { parties, PartyId } from "@/api/parties"
 import { ProgressBar } from "@/components/progressBar"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useIsEditingMe } from "./Edit"
 import {
   commitPrediction,
@@ -20,7 +20,7 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
   const party = parties[partyId]
   const value = usePartyPrediction(partyId)
   const formRef = useRef<HTMLFormElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   useEffect(() => {
     inputRef.current?.focus()
     function onClickDocument(e: MouseEvent) {
@@ -55,7 +55,7 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
           width={value * 100}
           color={party.color}
         >
-          <input
+          <PercentInput
             name="prediccio-barra"
             type="range"
             className={`absolute w-full h-full appearance-none bg-transparent top-0 outline-none`}
@@ -63,29 +63,29 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
             min="0"
             max={100}
             step={0.01}
-            value={(value * 100).toFixed()}
-            onChange={(e) =>
+            value={value}
+            onChange={(value) =>
               editPartyPrediction({
                 party: partyId,
-                prediction: e.target.valueAsNumber,
+                prediction: value,
               })
             }
           />
         </ProgressBar>
         <p className="flex-grow-0 flex ml-4">
-          <input
+          <PercentInput
             className="w-14 py-1 text-center"
-            ref={inputRef}
+            innerRef={inputRef}
             type="number"
             name="prediccio-text"
             min={0}
             max={100}
             step={0.01}
-            value={(value * 100).toFixed(2)}
-            onChange={(e) =>
+            value={value}
+            onChange={(value) =>
               editPartyPrediction({
                 party: partyId,
-                prediction: e.target.valueAsNumber,
+                prediction: value,
               })
             }
           />
@@ -93,6 +93,49 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
         </p>
       </div>
     </form>
+  )
+}
+
+const PercentInput: React.FC<
+  {
+    value: number
+    onChange: (value: number) => void
+    innerRef?: React.MutableRefObject<HTMLInputElement | null>
+  } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">
+> = ({ value, onChange, innerRef, ...rest }) => {
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const ref = (e: HTMLInputElement) => {
+    inputRef.current = e
+    if (innerRef) {
+      innerRef.current = e
+    }
+  }
+
+  const [inputValue, setInputValue] = useState((value * 100).toFixed(2))
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value)
+    if (!Number.isNaN(e.target.value)) {
+      onChange(Number(e.target.value) / 100)
+    }
+  }
+
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) {
+      setInputValue(Math.max(0, value * 100).toFixed(2))
+    }
+  }, [value])
+  const sync = () => setInputValue((value * 100).toFixed(2))
+
+  return (
+    <input
+      ref={ref}
+      value={inputValue}
+      onChange={handleChange}
+      onBlur={sync}
+      onMouseUp={sync}
+      {...rest}
+    />
   )
 }
 
