@@ -4,6 +4,7 @@ import { ProgressBar } from "@/components/progressBar"
 import { useEffect, useRef } from "react"
 import { useIsEditingMe } from "./Edit"
 import {
+  commitPrediction,
   editPartyPrediction,
   partyPrediction$,
   usePartyPrediction,
@@ -11,7 +12,7 @@ import {
 
 function onDone(e: KeyboardEvent | React.KeyboardEvent<any>) {
   if (e.key === "Escape" || e.key === "Enter") {
-    // onDoneEditing()
+    commitPrediction()
   }
 }
 
@@ -24,7 +25,7 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
     inputRef.current?.focus()
     function onClickDocument(e: MouseEvent) {
       if (formRef.current && !formRef.current.contains(e.target as any)) {
-        // onDoneEditing()
+        commitPrediction()
       }
     }
     document.addEventListener("click", onClickDocument)
@@ -32,6 +33,7 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
     return () => {
       document.removeEventListener("click", onClickDocument)
       document.removeEventListener("keydown", onDone)
+      commitPrediction()
     }
   }, [])
   return (
@@ -39,7 +41,7 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
       ref={formRef}
       onSubmit={(e) => {
         e.preventDefault()
-        // onDoneEditing()
+        commitPrediction()
       }}
       className="w-full flex flex-wrap"
     >
@@ -62,10 +64,6 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
             max={100}
             step={0.01}
             value={(value * 100).toFixed()}
-            // onMouseDown={startManipulating}
-            // onTouchStart={startManipulating}
-            // onTouchEnd={stopManipulating}
-            // onMouseUp={stopManipulating}
             onChange={(e) =>
               editPartyPrediction({
                 party: partyId,
