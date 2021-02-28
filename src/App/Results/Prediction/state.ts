@@ -2,7 +2,11 @@ import { Party, PartyId } from "@/api/parties"
 import { Provinces } from "@/api/provinces"
 import { Votes, votes$ } from "@/api/votes"
 import { add } from "@/utils/add"
-import { mapRecord } from "@/utils/record-utils"
+import {
+  mapRecord,
+  recordEntries,
+  recordFromEntries,
+} from "@/utils/record-utils"
 import { reduceRecord } from "@/utils/reduceRecord"
 import { bind, shareLatest } from "@react-rxjs/core"
 import { createListener } from "@react-rxjs/utils"
@@ -11,6 +15,7 @@ import {
   filter,
   map,
   mapTo,
+  scan,
   startWith,
   switchMap,
   tap,
@@ -143,28 +148,59 @@ export const predictedResult$ = selectedProvince$.pipe(
 )
 
 // Editing specific parties
+const [lockToggle$, toggleLock] = createListener<PartyId>()
 const [partyPredictionEdit$, editPartyPrediction] = createListener<{
   party: PartyId
   prediction: number
 }>()
-export { editPartyPrediction }
+export { editPartyPrediction, toggleLock }
+
+export const lockedParties$ = lockToggle$.pipe(
+  withLatestFrom(selectedProvince$),
+  scan((locks, [party, province]) => {
+    locks[party] = locks[party] || new Set<Provinces>()
+    if (province === null) {
+      const allProvinces = Object.keys(Provinces) as Provinces[]
+      if (locks[party].size === allProvinces.length) {
+        locks[party].clear()
+      } else {
+        allProvinces.forEach((province) => locks[party].add(province))
+      }
+      return locks
+    }
+    if (locks[party].has(province)) {
+      locks[party].delete(province)
+    } else {
+      locks[party].add(province)
+    }
+    return locks
+  }, {} as Record<PartyId, Set<Provinces>>),
+  startWith({} as Record<PartyId, Set<Provinces>>),
+  shareLatest(),
+)
 
 partyPredictionEdit$
   .pipe(
-    withLatestFrom(combineLatest([selectedProvince$, initialPrediction$])),
-    map(([edit, [province, initialPrediction]]) => ({
+    withLatestFrom(
+      combineLatest([selectedProvince$, initialPrediction$, lockedParties$]),
+    ),
+    map(([edit, [province, initialPrediction, locks]]) => ({
       edit,
       province,
       initialPrediction,
+      locks,
     })),
     // Only considering specific provinces for now
     filter(({ province }) => !!province),
-    map(({ edit, province, initialPrediction }) => {
+    map(({ edit, province, initialPrediction, locks }) => {
       const {
         [province!]: targetInitialPrediction,
         ...rest
       } = initialPrediction
       const restProvinces = rest as Prediction
+      const lockedParties = recordEntries(locks)
+        .filter(([_, provinces]) => provinces.has(province!))
+        .map(([party]) => party)
 
       return {
         ...restProvinces,
@@ -172,6 +208,7 @@ partyPredictionEdit$
           targetInitialPrediction,
           edit.party,
           edit.prediction,
+          lockedParties,
         ),
       }
     }),
@@ -182,9 +219,14 @@ function editPercent(
   initialPrediction: Record<PartyId, number>,
   partyId: PartyId,
   prediction: number,
+  locks: PartyId[],
 ): Record<PartyId, number> {
   const { [partyId]: targetInitialPrediction, ...rest } = initialPrediction
-  const movableParties = rest as typeof initialPrediction
+  const movableParties = recordFromEntries(
+    recordEntries(rest as typeof initialPrediction).filter(
+      ([partyId]) => !locks.includes(partyId),
+    ),
+  )
 
   const totalMovableParties = reduceRecord(movableParties, add)
   const targetDiff = prediction - targetInitialPrediction
@@ -193,16 +235,27 @@ function editPercent(
   const movablePredictions = mapRecord(movableParties, (initial) => {
     const result = Math.max(
       0,
-      initial - (targetDiff * initial) / totalMovableParties,
+      initial -
+        (totalMovableParties === 0
+          ? 0
+          : (targetDiff * initial) / totalMovableParties),
     )
     given += initial - result
     return result
   })
 
   const result = {
+    ...rest,
     ...movablePredictions,
     [partyId]: targetInitialPrediction + given,
   }
+  console.log({
+    rest,
+    movablePredictions,
+    given,
+    totalMovableParties,
+    targetDiff,
+  })
 
   return result
 }

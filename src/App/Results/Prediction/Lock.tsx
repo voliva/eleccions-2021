@@ -1,14 +1,36 @@
 import { PartyId } from "@/api/parties"
+import { Provinces } from "@/api/provinces"
+import { bind } from "@react-rxjs/core"
+import { combineLatest } from "rxjs"
+import { map } from "rxjs/operators"
+import { selectedProvince$ } from "../components/AreaPicker"
 import { useIsResults } from "../components/ResultsOrPrediction"
+import { lockedParties$, toggleLock } from "./state"
+
+const [useIsLocked] = bind(
+  (partyId: PartyId) =>
+    combineLatest([lockedParties$, selectedProvince$]).pipe(
+      map(([locks, province]) => {
+        const provinceLocks = locks[partyId] || new Set()
+        if (province === null) {
+          return provinceLocks.size === 0
+            ? false
+            : provinceLocks.size === Object.keys(Provinces).length
+            ? true
+            : null
+        }
+        return provinceLocks.has(province)
+      }),
+    ),
+  false,
+)
 
 export const Lock: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
   const isVisible = !useIsResults()
-  const isLocked = false // useIsLocked(partyId)
+  const isLocked = useIsLocked(partyId)
   return (
     <button
-      onClick={() => {
-        // onToggleLock(partyId)
-      }}
+      onClick={() => toggleLock(partyId)}
       className={`w-6 ${
         isLocked
           ? "text-red-800"
