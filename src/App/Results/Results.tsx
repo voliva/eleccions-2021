@@ -1,7 +1,6 @@
 import { parties } from "@/api/parties"
 import { bind, Subscribe } from "@react-rxjs/core"
-// import { useIsResults } from "@/App/ResultsOrPrediction"
-import { Flipper, Flipped } from "react-flip-toolkit"
+import { Flipped, Flipper } from "react-flip-toolkit"
 import { merge } from "rxjs"
 import { map } from "rxjs/operators"
 import { AreaPicker } from "./components/AreaPicker"
@@ -10,9 +9,10 @@ import { ResultsChart, resultsChart$ } from "./components/ResultsChart"
 import {
   ResultsOrPrediction,
   selectedInitialResult$,
+  useIsResults,
 } from "./components/ResultsOrPrediction"
+import { resetPrediction, useIsPristine } from "./Prediction/state"
 import { PartyResults } from "./state/results"
-// import { onReset, useIsPristine } from "./state/common"
 
 const sortPartyResults = (a: PartyResults, b: PartyResults) =>
   b.sits - a.sits ||
@@ -50,20 +50,20 @@ const Parties: React.FC = () => {
   )
 }
 
-// const Reset: React.FC = () => {
-//   const isResults = useIsResults()
-//   const isPristine = useIsPristine()
-//   return isPristine || isResults ? null : (
-//     <div className="text-right pr-1.5">
-//       <button
-//         className="border-2 border-green-700 text-green-700 rounded-md px-2 py-1 text-sm"
-//         onClick={onReset}
-//       >
-//         Neteja les prediccions
-//       </button>
-//     </div>
-//   )
-// }
+const Reset: React.FC = () => {
+  const isResults = useIsResults()
+  const isPristine = useIsPristine()
+  return isPristine || isResults ? null : (
+    <div className="text-right pr-1.5">
+      <button
+        className="border-2 border-green-700 text-green-700 rounded-md px-2 py-1 text-sm"
+        onClick={resetPrediction}
+      >
+        Neteja les prediccions
+      </button>
+    </div>
+  )
+}
 
 const $results = merge(order$, resultsChart$)
 export const Results: React.FC = () => {
@@ -73,7 +73,7 @@ export const Results: React.FC = () => {
       <AreaPicker />
       <main>
         <ResultsChart />
-        {/* <Reset /> */}
+        <Reset />
         <Parties />
       </main>
     </Subscribe>

@@ -4,13 +4,13 @@ import { PartyId } from "api/parties"
 import { merge } from "rxjs"
 import { map, mapTo, startWith } from "rxjs/operators"
 import { useIsResults } from "../components/ResultsOrPrediction"
+import { commitPrediction, predictionCommit$ } from "./state"
 
 const [editParty$, onEditParty] = createListener<PartyId>()
-const [doneEditing$, onDoneEditing] = createListener()
 
 export const editingParty$ = merge(
   editParty$,
-  doneEditing$.pipe(mapTo(null)),
+  predictionCommit$.pipe(mapTo(null)),
 ).pipe(startWith(null), shareLatest())
 
 export const [useIsEditingMe] = bind(
@@ -22,7 +22,7 @@ export const [useIsEditingMe] = bind(
 export const Edit: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
   const isEditingMe = useIsEditingMe(partyId)
   const isVisible = !useIsResults()
-  const onClick = isEditingMe ? onDoneEditing : () => onEditParty(partyId)
+  const onClick = isEditingMe ? commitPrediction : () => onEditParty(partyId)
 
   return (
     <button

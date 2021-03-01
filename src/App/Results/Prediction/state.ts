@@ -1,4 +1,4 @@
-import { Party, PartyId } from "@/api/parties"
+import { PartyId } from "@/api/parties"
 import { Provinces } from "@/api/provinces"
 import { Votes, votes$ } from "@/api/votes"
 import { add } from "@/utils/add"
@@ -12,7 +12,6 @@ import { bind, shareLatest } from "@react-rxjs/core"
 import { createListener } from "@react-rxjs/utils"
 import { combineLatest, merge, Observable } from "rxjs"
 import {
-  filter,
   map,
   mapTo,
   scan,
@@ -47,7 +46,6 @@ const automaticPrediction$ = votesWithPartyVotes$.pipe(
 )
 
 const [predictionEdit$, editPrediction] = createListener<Prediction>()
-const editedPrediction$ = predictionEdit$.pipe(startWith(null), shareLatest())
 
 const [predictionCommit$, commitPrediction] = createListener()
 const [predictionReset$, resetPrediction] = createListener()
@@ -59,7 +57,18 @@ const commitedPrediction$ = merge(
   predictionReset$.pipe(mapTo(null)),
 ).pipe(startWith(null), shareLatest())
 
-export { commitPrediction, resetPrediction }
+export { commitPrediction, resetPrediction, predictionCommit$ }
+export { editPartyPrediction, toggleLock }
+
+const editedPrediction$ = merge(
+  predictionEdit$,
+  predictionCommit$.pipe(mapTo(null)),
+).pipe(startWith(null), shareLatest())
+
+export const [useIsPristine] = bind(
+  commitedPrediction$.pipe(map((v) => !v)),
+  true,
+)
 
 // Used as a baseline for editing, so the same value always yields the same result
 // Also used for the order: This way it doesn't change while the user is editing
@@ -154,7 +163,6 @@ const [partyPredictionEdit$, editPartyPrediction] = createListener<{
   party: PartyId
   prediction: number
 }>()
-export { editPartyPrediction, toggleLock }
 
 export const lockedParties$ = lockToggle$.pipe(
   withLatestFrom(selectedProvince$),
@@ -324,21 +332,21 @@ function handleGlobalPredictionEdit(edit: {
           if (deltaVotes < 0) {
             // Other parties receive: This will be either 0 (all other parties locked)
             // or edit.party's extra votes (all votes it can give away on that province)
-          if (
-            Object.keys(provinceVotes.parties).every((party) =>
-              provinceLocks.has(party as PartyId),
+            if (
+              Object.keys(provinceVotes.parties).every((party) =>
+                provinceLocks.has(party as PartyId),
+              )
             )
-          )
-            return 0
-          return provinceVotes.addedVotes[edit.party] || 0
-        }
-
-        // Other parties need to give: count the amount of votes other parties are willing to give
-        return recordEntries(provinceVotes.addedVotes)
-          .map(([party, votes]) => {
-            if (provinceLocks.has(party) || party === edit.party) {
               return 0
-            }
+            return provinceVotes.addedVotes[edit.party] || 0
+          }
+
+          // Other parties need to give: count the amount of votes other parties are willing to give
+          return recordEntries(provinceVotes.addedVotes)
+            .map(([party, votes]) => {
+              if (provinceLocks.has(party) || party === edit.party) {
+                return 0
+              }
               return votes
             })
             .reduce(add)
