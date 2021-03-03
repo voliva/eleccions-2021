@@ -24,7 +24,7 @@ import {
 import { selectedProvince$ } from "../components/AreaPicker"
 import { createResultStreams, totalCounts$ } from "../state/results"
 
-type Prediction = Record<Provinces, Record<PartyId, number>>
+export type Prediction = Record<Provinces, Record<PartyId, number>>
 
 const votesWithPartyVotes$ = votes$.pipe(
   map((provinces) =>
@@ -36,11 +36,15 @@ const votesWithPartyVotes$ = votes$.pipe(
 )
 
 // Decision: % whites and nils remains constant, user selects part from 0->100% of not counted party votes (totalVotes - estimatedWhite - estimatedNil)
-const automaticPrediction$ = votesWithPartyVotes$.pipe(
+export const automaticPrediction$ = votesWithPartyVotes$.pipe(
   map(
     (provinces): Prediction =>
       mapRecord(provinces, ({ parties, partyVotes }) =>
-        mapRecord(parties, (votes) => votes / partyVotes),
+        mapRecord(parties, (votes) =>
+          partyVotes === 0
+            ? 1 / Object.keys(parties).length
+            : votes / partyVotes,
+        ),
       ),
   ),
 )
@@ -57,8 +61,12 @@ const commitedPrediction$ = merge(
   predictionReset$.pipe(mapTo(null)),
 ).pipe(startWith(null), shareLatest())
 
-export { commitPrediction, resetPrediction, predictionCommit$ }
-export { editPartyPrediction, toggleLock }
+export {
+  commitPrediction,
+  resetPrediction,
+  predictionCommit$,
+  predictionReset$,
+}
 
 const editedPrediction$ = merge(
   predictionEdit$,
@@ -82,12 +90,42 @@ const visiblePrediction$ = combineLatest([
   editedPrediction$,
 ]).pipe(map(([initial, edited]) => edited || initial))
 
+// When we reach 100%, we want to edit the full result (as uncounted doesn't make sense anymore)
+const isCountComplete$ = totalCounts$.pipe(
+  map((res) => mapRecord(res, (v) => v.counted === v.nVoters)),
+  map((res) => reduceRecord(res, (acc, v) => acc && v)),
+)
+
 const globalPrediction$ = combineLatest([
   visiblePrediction$,
   totalCounts$,
   votesWithPartyVotes$,
+  isCountComplete$,
 ]).pipe(
-  map(([prediction, counts, results]) => {
+  map(([prediction, counts, results, isComplete]) => {
+    if (isComplete) {
+      const votesPredicted = mapRecord(
+        prediction,
+        (provincePrediction, province) =>
+          mapRecord(
+            provincePrediction,
+            (prediction) => results[province].partyVotes * prediction,
+          ),
+      )
+      const globalVotesPredicted = reduceRecord(
+        votesPredicted,
+        (acc, votes) => ({
+          ...acc,
+          ...mapRecord(votes, (v, party) => v + (acc[party] || 0)),
+        }),
+      )
+      const totalVotesPredicted = reduceRecord(globalVotesPredicted, add)
+
+      return mapRecord(globalVotesPredicted, (votes) =>
+        totalVotesPredicted === 0 ? 0 : votes / totalVotesPredicted,
+      )
+    }
+
     const toCount = mapRecord(
       counts,
       ({ nVoters, counted }) => nVoters - counted,
@@ -105,10 +143,10 @@ const globalPrediction$ = combineLatest([
     const votesPredicted = mapRecord(
       prediction,
       (provincePrediction, province) =>
-        mapRecord(
-          provincePrediction,
-          (prediction) =>
-            (toCount[province] - noPartyCount[province]) * prediction,
+        mapRecord(provincePrediction, (prediction, party) =>
+          toCount[province] === 0
+            ? results[province].parties[party]
+            : (toCount[province] - noPartyCount[province]) * prediction,
         ),
     )
     const globalVotesPredicted = reduceRecord(votesPredicted, (acc, votes) => ({
@@ -117,9 +155,8 @@ const globalPrediction$ = combineLatest([
     }))
     const totalVotesPredicted = reduceRecord(globalVotesPredicted, add)
 
-    const result = mapRecord(
-      globalVotesPredicted,
-      (votes) => votes / totalVotesPredicted,
+    const result = mapRecord(globalVotesPredicted, (votes) =>
+      totalVotesPredicted === 0 ? 0 : votes / totalVotesPredicted,
     )
     return result
   }),
@@ -163,6 +200,7 @@ const [partyPredictionEdit$, editPartyPrediction] = createListener<{
   party: PartyId
   prediction: number
 }>()
+export { toggleLock, editPartyPrediction }
 
 export const lockedParties$ = lockToggle$.pipe(
   withLatestFrom(selectedProvince$),
@@ -275,13 +313,15 @@ function handleGlobalPredictionEdit(edit: {
     lockedParties$,
     totalCounts$,
     votesWithPartyVotes$,
+    isCountComplete$,
   ]).pipe(
     take(1),
-    map(([initialPrediction, locks, counts, votes]) => {
+    map(([initialPrediction, locks, counts, votes, isComplete]) => {
       const initialPredictedVotes = getPredictedVotes(
         votes,
         counts,
         initialPrediction,
+        isComplete,
       )
       const initialGlobalVotes = reduceRecord(
         initialPredictedVotes,
@@ -296,13 +336,24 @@ function handleGlobalPredictionEdit(edit: {
       )
 
       // Calculate the number of votes needed to reach edit.prediction
-      const totalToCount = reduceRecord(toCount, add)
-      const realVotes = reduceRecord(
-        votes,
-        (total, v) => total + (v.parties[edit.party] || 0),
-        0,
-      )
-      const targetVotes = realVotes + totalToCount * edit.prediction
+      const targetVotes = (() => {
+        if (isComplete) {
+          const totalVotes = reduceRecord(
+            votes,
+            (total, v) => total + v.partyVotes,
+            0,
+          )
+          return totalVotes * edit.prediction
+        }
+
+        const totalToCount = reduceRecord(toCount, add)
+        const realVotes = reduceRecord(
+          votes,
+          (total, v) => total + (v.parties[edit.party] || 0),
+          0,
+        )
+        return realVotes + totalToCount * edit.prediction
+      })()
       const deltaVotes = targetVotes - initialGlobalVotes
 
       // 2. Calculate margin for each province: i.e. how much votes can it raise? How much votes can it decrease?
@@ -338,7 +389,11 @@ function handleGlobalPredictionEdit(edit: {
               )
             )
               return 0
-            return provinceVotes.addedVotes[edit.party] || 0
+            return (
+              (isComplete
+                ? provinceVotes.parties[edit.party]
+                : provinceVotes.addedVotes[edit.party]) || 0
+            )
           }
 
           // Other parties need to give: count the amount of votes other parties are willing to give
@@ -347,7 +402,7 @@ function handleGlobalPredictionEdit(edit: {
               if (provinceLocks.has(party) || party === edit.party) {
                 return 0
               }
-              return votes
+              return isComplete ? provinceVotes.parties[party] : votes
             })
             .reduce(add)
         },
@@ -364,10 +419,14 @@ function handleGlobalPredictionEdit(edit: {
         const votesReceived = (deltaVotes * margin) / totalMargins
         const targetAddedVotes = Math.max(
           0,
-          (initialPredictedVotes[province].addedVotes[edit.party] || 0) +
+          ((isComplete
+            ? initialPredictedVotes[province].parties[edit.party]
+            : initialPredictedVotes[province].addedVotes[edit.party]) || 0) +
             votesReceived,
         )
-        const remainingPartyVotes = toCount[province]
+        const remainingPartyVotes = isComplete
+          ? votes[province].partyVotes
+          : toCount[province]
 
         return editPercent(
           initialPrediction[province],
@@ -387,9 +446,10 @@ function predictionToResult$(prediction$: Observable<Prediction>) {
     votesWithPartyVotes$,
     totalCounts$,
     prediction$,
+    isCountComplete$,
   ]).pipe(
-    map(([votes, counts, prediction]) =>
-      getPredictedVotes(votes, counts, prediction),
+    map(([votes, counts, prediction, isComplete]) =>
+      getPredictedVotes(votes, counts, prediction, isComplete),
     ),
   )
   return createResultStreams(predictedVotes$)
@@ -402,13 +462,14 @@ function getPredictedVotes(
     { nVoters: number; census: number; counted: number }
   >,
   prediction: Prediction,
+  isComplete: boolean,
 ) {
   return mapRecord(realVotes, (provinceVotes, province) => {
     const votesPending = counts[province].nVoters - counts[province].counted
     const totalVotes =
       provinceVotes.nil + provinceVotes.white + provinceVotes.partyVotes
-    const nilPct = provinceVotes.nil / totalVotes
-    const whitePct = provinceVotes.white / totalVotes
+    const nilPct = totalVotes === 0 ? 0 : provinceVotes.nil / totalVotes
+    const whitePct = totalVotes === 0 ? 0 : provinceVotes.white / totalVotes
     const partyPct = 1 - nilPct - whitePct
 
     const addedVotes = mapRecord(prediction[province], (pred) =>
@@ -418,9 +479,10 @@ function getPredictedVotes(
     return {
       nil: provinceVotes.nil + Math.round(votesPending * nilPct),
       white: provinceVotes.white + Math.round(votesPending * whitePct),
-      parties: mapRecord(
-        provinceVotes.parties,
-        (v, party) => v + addedVotes[party],
+      parties: mapRecord(provinceVotes.parties, (v, party) =>
+        isComplete
+          ? provinceVotes.partyVotes * prediction[province][party]
+          : v + addedVotes[party],
       ),
       addedVotes,
     }
