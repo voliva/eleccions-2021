@@ -1,10 +1,10 @@
 import { useState } from "react"
 import { Flipper, Flipped } from "react-flip-toolkit"
 import { parties, PartyId } from "@/api/parties"
-import { useCurrentResults } from "../../state"
+import { useSelectedResults } from "../ResultsOrPrediction"
 
 const SitsChart = () => {
-  const results = useCurrentResults()
+  const results = useSelectedResults()
   const sits = results.sits || []
 
   const [sorting, setSorting] = useState<"party" | "dhondt">("party")

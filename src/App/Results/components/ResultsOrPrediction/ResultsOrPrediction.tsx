@@ -13,8 +13,10 @@ export const [useIsResults, isResults$] = bind(
   true,
 )
 
-export const selectedResults$ = isResults$.pipe(
-  switchMap((isResults) => (isResults ? currentResults$ : predictedResult$)),
+export const [useSelectedResults, selectedResults$] = bind(
+  isResults$.pipe(
+    switchMap((isResults) => (isResults ? currentResults$ : predictedResult$)),
+  ),
 )
 export const selectedInitialResult$ = isResults$.pipe(
   switchMap((isResults) => (isResults ? currentResults$ : commitedResult$)),

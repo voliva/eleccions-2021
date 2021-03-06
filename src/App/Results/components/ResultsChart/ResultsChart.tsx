@@ -9,7 +9,7 @@ import { globalPercent$, percent$ } from "../../state/results"
 import { GradientChart } from "./gradientChart"
 import { HalfDonut } from "./halfDonut"
 import { LineChart } from "./lineChart"
-import { selectedResults$ } from "../ResultsOrPrediction"
+import { selectedResults$, useSelectedResults } from "../ResultsOrPrediction"
 import { merge } from "rxjs"
 
 const sitsChartPromise = import("./flipSitsChart")
@@ -24,8 +24,7 @@ const [usePercents, percents$] = bind(
   ),
 )
 
-const [useCurrentResults, currentResults$] = bind(selectedResults$)
-export const resultsChart$ = merge(percents$, currentResults$)
+export const resultsChart$ = merge(percents$, selectedResults$)
 export const ResultsChart = () => {
   const [counted, participation] = usePercents().map((x) =>
     (x * 100).toFixed(2),
@@ -46,7 +45,7 @@ export const ResultsChart = () => {
 }
 
 const Chart: FC<{ counted: string }> = ({ counted, children }) => {
-  const results = useCurrentResults()
+  const results = useSelectedResults()
   const [expanded, setExpanded] = useState(false)
   const isProvince = Boolean(useSelectedProvince())
 
@@ -82,7 +81,7 @@ const Chart: FC<{ counted: string }> = ({ counted, children }) => {
 }
 
 const LinearParlament: FC<{ onClick?: () => void }> = ({ onClick }) => {
-  const results = useCurrentResults()
+  const results = useSelectedResults()
   const chartResults = recordFromEntries(
     recordEntries(results.parties).map(([id, result]) => [
       parties[id].color,
@@ -96,7 +95,7 @@ const LinearParlament: FC<{ onClick?: () => void }> = ({ onClick }) => {
 const DetailView = () => {
   const selectedProvince = useSelectedProvince()
   const sits = selectedProvince ? sitsByProvince[selectedProvince] : totalSits
-  const results = useCurrentResults()
+  const results = useSelectedResults()
   const relevantParties = recordEntries(results.parties)
     .filter(([, p]) => p.sits > 0)
     .sort(([, a], [, b]) => b.sits - a.sits || b.votes - a.votes)
