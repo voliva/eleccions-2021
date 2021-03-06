@@ -33,7 +33,6 @@ const FormBase: React.FC<{ partyId: PartyId }> = ({ partyId }) => {
     return () => {
       document.removeEventListener("click", onClickDocument)
       document.removeEventListener("keydown", onDone)
-      commitPrediction()
     }
   }, [])
   return (

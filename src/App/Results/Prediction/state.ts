@@ -55,7 +55,7 @@ const [predictionCommit$, commitPrediction] = createListener()
 const [predictionReset$, resetPrediction] = createListener()
 const commitedPrediction$ = merge(
   predictionCommit$.pipe(
-    withLatestFrom(predictionEdit$),
+    withLatestFrom(merge(predictionEdit$, predictionReset$.pipe(mapTo(null)))),
     map(([_, p]) => p),
   ),
   predictionReset$.pipe(mapTo(null)),

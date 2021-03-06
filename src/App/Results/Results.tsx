@@ -35,7 +35,7 @@ const Parties: React.FC = () => {
     <Flipper flipKey={partyIds.join()}>
       <ul>
         {partyIds.map((partyId) => (
-          <Flipped key={partyId} flipId={partyId}>
+          <Flipped key={partyId} flipId={partyId} translate>
             <li
               className={
                 "flex flex-wrap items-center p-3 mx-1 my-1.5 border-gray-300 border rounded-md bg-white"
